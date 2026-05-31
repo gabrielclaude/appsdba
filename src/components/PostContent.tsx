@@ -78,6 +78,9 @@ export function PostContent({ content }: PostContentProps) {
 
 function formatInline(text: string): string {
   return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/`(.+?)`/g, '<code class="bg-gray-100 text-red-700 px-1 py-0.5 rounded text-sm font-mono">$1</code>');
 }
