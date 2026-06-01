@@ -34,6 +34,11 @@ export const CATEGORIES = {
     color: 'bg-pink-100 text-pink-800',
     description: 'Oracle E-Business Suite Integrated SOA Gateway — REST and SOAP service deployment, architecture, and integration patterns.',
   },
+  'soa-suite': {
+    label: 'SOA Suite',
+    color: 'bg-teal-100 text-teal-800',
+    description: 'Oracle SOA Suite and Oracle Service Bus — service orchestration, BPEL, mediator, adapters, and OSB proxy/business services.',
+  },
 } as const;
 
 export type CategoryKey = keyof typeof CATEGORIES;
