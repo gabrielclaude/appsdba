@@ -44,6 +44,11 @@ export const CATEGORIES = {
     color: 'bg-indigo-100 text-indigo-800',
     description: 'Oracle Fusion Middleware platform — WebLogic, JRF, MDS, OPSS, RCU, patching, and cross-component administration.',
   },
+  'linux-admin': {
+    label: 'Linux Admin',
+    color: 'bg-stone-100 text-stone-800',
+    description: 'Linux system administration — performance tuning, storage, networking, kernel parameters, and Oracle workload configuration.',
+  },
 } as const;
 
 export type CategoryKey = keyof typeof CATEGORIES;

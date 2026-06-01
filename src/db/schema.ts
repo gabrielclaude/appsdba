@@ -10,6 +10,7 @@ export const categoryEnum = pgEnum('category', [
   'ebs-isg',
   'soa-suite',
   'fusion-middleware',
+  'linux-admin',
 ]);
 
 export const posts = pgTable('posts', {
