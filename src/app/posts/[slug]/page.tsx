@@ -5,6 +5,7 @@ import { getSubscription, isActive } from '@/lib/subscriptions';
 import { getCategoryLabel, getCategoryColor } from '@/lib/categories';
 import { Badge } from '@/components/ui/badge';
 import { YouTubeEmbed } from '@/components/YouTubeEmbed';
+import { VideoPlayer } from '@/components/VideoPlayer';
 import { PostContent } from '@/components/PostContent';
 import { PaywallCTA } from '@/components/PaywallCTA';
 import Link from 'next/link';
@@ -91,6 +92,10 @@ export default async function PostPage({ params }: Props) {
 
       {post.youtubeUrl && (
         <YouTubeEmbed url={post.youtubeUrl} title={post.title} />
+      )}
+
+      {post.videoUrl && (
+        <VideoPlayer url={post.videoUrl} title={post.title} />
       )}
 
       <div className={`bg-white rounded-xl border border-gray-200 p-6 sm:p-8 ${isLocked ? 'relative overflow-hidden' : ''}`}>

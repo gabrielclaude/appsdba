@@ -22,6 +22,7 @@ export const posts = pgTable('posts', {
   content: text('content').notNull(),
   category: categoryEnum('category').notNull(),
   youtubeUrl: varchar('youtube_url', { length: 500 }),
+  videoUrl: varchar('video_url', { length: 500 }),
   isPremium: boolean('is_premium').notNull().default(false),
   published: boolean('published').notNull().default(false),
   publishedAt: timestamp('published_at'),
