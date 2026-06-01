@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
+import { ClerkProvider } from '@clerk/nextjs';
 import './globals.css';
 import { Header } from '@/components/Header';
 
@@ -24,14 +25,16 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col bg-gray-50">
-        <Header />
-        <main className="flex-1 max-w-6xl mx-auto w-full px-4 py-8">{children}</main>
-        <footer className="border-t bg-gray-900 text-gray-400 text-sm text-center py-6">
-          © {new Date().getFullYear()} 21st Century Apps DBA · Oracle · EBS · WebLogic · GoldenGate · RAC
-        </footer>
-      </body>
-    </html>
+    <ClerkProvider>
+      <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
+        <body className="min-h-full flex flex-col bg-gray-50">
+          <Header />
+          <main className="flex-1 max-w-6xl mx-auto w-full px-4 py-8">{children}</main>
+          <footer className="border-t bg-gray-900 text-gray-400 text-sm text-center py-6">
+            © {new Date().getFullYear()} 21st Century Apps DBA · Oracle · EBS · WebLogic · GoldenGate · RAC
+          </footer>
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }

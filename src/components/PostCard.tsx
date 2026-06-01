@@ -21,9 +21,16 @@ export function PostCard({ post }: PostCardProps) {
               {post.title}
             </h2>
           </Link>
-          <Badge className={`shrink-0 text-xs font-medium border-0 ${getCategoryColor(categoryKey)}`}>
-            {getCategoryLabel(categoryKey)}
-          </Badge>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {post.isPremium && (
+              <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">
+                Premium
+              </span>
+            )}
+            <Badge className={`text-xs font-medium border-0 ${getCategoryColor(categoryKey)}`}>
+              {getCategoryLabel(categoryKey)}
+            </Badge>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
