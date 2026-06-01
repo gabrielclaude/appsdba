@@ -7,6 +7,7 @@ export const categoryEnum = pgEnum('category', [
   'golden-gate',
   'disaster-recovery',
   'rac-clusterware',
+  'ebs-isg',
 ]);
 
 export const posts = pgTable('posts', {

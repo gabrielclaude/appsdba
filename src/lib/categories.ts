@@ -29,6 +29,11 @@ export const CATEGORIES = {
     color: 'bg-purple-100 text-purple-800',
     description: 'Oracle Real Application Clusters, Grid Infrastructure, and ASM.',
   },
+  'ebs-isg': {
+    label: 'EBS SOA Gateway',
+    color: 'bg-pink-100 text-pink-800',
+    description: 'Oracle E-Business Suite Integrated SOA Gateway — REST and SOAP service deployment, architecture, and integration patterns.',
+  },
 } as const;
 
 export type CategoryKey = keyof typeof CATEGORIES;
