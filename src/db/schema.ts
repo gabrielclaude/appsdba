@@ -11,6 +11,7 @@ export const categoryEnum = pgEnum('category', [
   'soa-suite',
   'fusion-middleware',
   'linux-admin',
+  'exadata',
 ]);
 
 export const posts = pgTable('posts', {

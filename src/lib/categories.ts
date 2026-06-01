@@ -49,6 +49,11 @@ export const CATEGORIES = {
     color: 'bg-stone-100 text-stone-800',
     description: 'Linux system administration — performance tuning, storage, networking, kernel parameters, and Oracle workload configuration.',
   },
+  'exadata': {
+    label: 'Exadata',
+    color: 'bg-cyan-100 text-cyan-800',
+    description: 'Oracle Exadata Database Machine — architecture, Smart Scan, storage indexes, cell offloading, IORM, patching, and administration.',
+  },
 } as const;
 
 export type CategoryKey = keyof typeof CATEGORIES;
