@@ -9,6 +9,7 @@ export const categoryEnum = pgEnum('category', [
   'rac-clusterware',
   'ebs-isg',
   'soa-suite',
+  'fusion-middleware',
 ]);
 
 export const posts = pgTable('posts', {

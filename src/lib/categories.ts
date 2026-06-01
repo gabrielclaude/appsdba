@@ -39,6 +39,11 @@ export const CATEGORIES = {
     color: 'bg-teal-100 text-teal-800',
     description: 'Oracle SOA Suite and Oracle Service Bus — service orchestration, BPEL, mediator, adapters, and OSB proxy/business services.',
   },
+  'fusion-middleware': {
+    label: 'Fusion Middleware',
+    color: 'bg-indigo-100 text-indigo-800',
+    description: 'Oracle Fusion Middleware platform — WebLogic, JRF, MDS, OPSS, RCU, patching, and cross-component administration.',
+  },
 } as const;
 
 export type CategoryKey = keyof typeof CATEGORIES;
