@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
-import { ClerkProvider } from '@clerk/nextjs';
 import './globals.css';
 import { Header } from '@/components/Header';
 
@@ -23,9 +22,19 @@ export const metadata: Metadata = {
     'Deep-dive articles on Oracle Database, EBS Suite 12, WebLogic, GoldenGate, Data Guard disaster recovery, and Oracle RAC & Clusterware.',
 };
 
+const clerkEnabled = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
+
+async function MaybeClerkProvider({ children }: { children: React.ReactNode }) {
+  if (clerkEnabled) {
+    const { ClerkProvider } = await import('@clerk/nextjs');
+    return <ClerkProvider>{children}</ClerkProvider>;
+  }
+  return <>{children}</>;
+}
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <ClerkProvider>
+    <MaybeClerkProvider>
       <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
         <body className="min-h-full flex flex-col bg-gray-50">
           <Header />
@@ -35,6 +44,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </footer>
         </body>
       </html>
-    </ClerkProvider>
+    </MaybeClerkProvider>
   );
 }

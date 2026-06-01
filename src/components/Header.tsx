@@ -1,11 +1,36 @@
 import Link from 'next/link';
-import { auth } from '@clerk/nextjs/server';
-import { UserButton, SignInButton } from '@clerk/nextjs';
 import { CATEGORIES } from '@/lib/categories';
 
-export async function Header() {
+const clerkEnabled = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
+
+async function AuthButtons() {
+  if (!clerkEnabled) return null;
+
+  const { auth } = await import('@clerk/nextjs/server');
+  const { UserButton, SignInButton } = await import('@clerk/nextjs');
   const { userId } = await auth();
 
+  if (userId) {
+    return (
+      <>
+        <Link href="/account" className="text-xs text-gray-300 hover:text-white transition-colors hidden sm:block">
+          Account
+        </Link>
+        <UserButton />
+      </>
+    );
+  }
+
+  return (
+    <SignInButton mode="modal">
+      <button className="text-sm px-3 py-1.5 rounded bg-orange-500 hover:bg-orange-600 text-white transition-colors cursor-pointer">
+        Sign In
+      </button>
+    </SignInButton>
+  );
+}
+
+export async function Header() {
   return (
     <header className="bg-gray-900 text-white shadow-lg">
       <div className="max-w-6xl mx-auto px-4">
@@ -24,20 +49,7 @@ export async function Header() {
             >
               Pricing
             </Link>
-            {userId ? (
-              <>
-                <Link href="/account" className="text-xs text-gray-300 hover:text-white transition-colors hidden sm:block">
-                  Account
-                </Link>
-                <UserButton />
-              </>
-            ) : (
-              <SignInButton mode="modal">
-                <button className="text-sm px-3 py-1.5 rounded bg-orange-500 hover:bg-orange-600 text-white transition-colors cursor-pointer">
-                  Sign In
-                </button>
-              </SignInButton>
-            )}
+            <AuthButtons />
           </div>
         </div>
 

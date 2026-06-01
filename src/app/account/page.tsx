@@ -1,6 +1,4 @@
-import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
-import { UserButton } from '@clerk/nextjs';
 import Link from 'next/link';
 import { getSubscription, isActive } from '@/lib/subscriptions';
 import { ManageSubscriptionButton } from '@/components/ManageSubscriptionButton';
@@ -9,6 +7,8 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = { title: 'Account' };
 
 export default async function AccountPage() {
+  const { auth } = await import('@clerk/nextjs/server');
+  const { UserButton } = await import('@clerk/nextjs');
   const { userId } = await auth();
   if (!userId) redirect('/sign-in');
 

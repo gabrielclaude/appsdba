@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
-import { auth } from '@clerk/nextjs/server';
 import { getPostBySlug, getAllPosts } from '@/lib/posts';
+
+const clerkEnabled = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
 import { getSubscription, isActive } from '@/lib/subscriptions';
 import { getCategoryLabel, getCategoryColor } from '@/lib/categories';
 import { Badge } from '@/components/ui/badge';
@@ -45,7 +46,12 @@ export default async function PostPage({ params }: Props) {
   const post = await getPostBySlug(slug);
   if (!post) notFound();
 
-  const { userId } = await auth();
+  let userId: string | null = null;
+  if (clerkEnabled) {
+    const { auth } = await import('@clerk/nextjs/server');
+    const result = await auth();
+    userId = result.userId;
+  }
   const sub = userId ? await getSubscription(userId) : null;
   const subscribed = isActive(sub);
   const isLocked = post.isPremium && !subscribed;

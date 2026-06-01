@@ -1,8 +1,8 @@
-import { auth } from '@clerk/nextjs/server';
 import { stripe } from '@/lib/stripe';
 import { getSubscription } from '@/lib/subscriptions';
 
 export async function POST() {
+  const { auth } = await import('@clerk/nextjs/server');
   const { userId } = await auth();
   if (!userId) return new Response('Unauthorized', { status: 401 });
 
