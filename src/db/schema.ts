@@ -46,3 +46,17 @@ export const subscriptions = pgTable('subscriptions', {
 });
 
 export type Subscription = typeof subscriptions.$inferSelect;
+
+export const users = pgTable('users', {
+  id: serial('id').primaryKey(),
+  clerkUserId: varchar('clerk_user_id', { length: 255 }).notNull().unique(),
+  email: varchar('email', { length: 255 }).notNull(),
+  firstName: varchar('first_name', { length: 255 }),
+  lastName: varchar('last_name', { length: 255 }),
+  imageUrl: varchar('image_url', { length: 500 }),
+  provider: varchar('provider', { length: 50 }).default('email'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export type User = typeof users.$inferSelect;
