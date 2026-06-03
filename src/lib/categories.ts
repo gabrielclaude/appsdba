@@ -54,6 +54,11 @@ export const CATEGORIES = {
     color: 'bg-cyan-100 text-cyan-800',
     description: 'Oracle Exadata Database Machine — architecture, Smart Scan, storage indexes, cell offloading, IORM, patching, and administration.',
   },
+  'essbase': {
+    label: 'Essbase',
+    color: 'bg-violet-100 text-violet-800',
+    description: 'Oracle Essbase — multidimensional analytics, BSO and ASO cube design, topology, EPM integration, and administration.',
+  },
 } as const;
 
 export type CategoryKey = keyof typeof CATEGORIES;

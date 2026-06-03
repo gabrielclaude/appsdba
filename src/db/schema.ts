@@ -12,6 +12,7 @@ export const categoryEnum = pgEnum('category', [
   'fusion-middleware',
   'linux-admin',
   'exadata',
+  'essbase',
 ]);
 
 export const posts = pgTable('posts', {
