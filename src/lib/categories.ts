@@ -59,6 +59,11 @@ export const CATEGORIES = {
     color: 'bg-violet-100 text-violet-800',
     description: 'Oracle Essbase — multidimensional analytics, BSO and ASO cube design, topology, EPM integration, and administration.',
   },
+  'identity-management': {
+    label: 'Identity Management',
+    color: 'bg-rose-100 text-rose-800',
+    description: 'Oracle Identity & Access Management — OAM single sign-on, OIM user provisioning, and OID LDAP directory administration.',
+  },
 } as const;
 
 export type CategoryKey = keyof typeof CATEGORIES;

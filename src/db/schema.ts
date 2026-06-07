@@ -13,6 +13,7 @@ export const categoryEnum = pgEnum('category', [
   'linux-admin',
   'exadata',
   'essbase',
+  'identity-management',
 ]);
 
 export const posts = pgTable('posts', {
