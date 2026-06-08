@@ -15,6 +15,7 @@ export const categoryEnum = pgEnum('category', [
   'essbase',
   'identity-management',
   'golden-gate-problems',
+  'ebs-functional',
 ]);
 
 export const posts = pgTable('posts', {

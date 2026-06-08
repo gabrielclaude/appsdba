@@ -69,6 +69,11 @@ export const CATEGORIES = {
     color: 'bg-emerald-100 text-emerald-800',
     description: 'Oracle GoldenGate production incident case studies, root cause analysis, and resolution patterns for extract lag, apply errors, and replication failures.',
   },
+  'ebs-functional': {
+    label: 'EBS Functional',
+    color: 'bg-amber-100 text-amber-800',
+    description: 'Oracle E-Business Suite functional module troubleshooting — General Ledger, Payables, Receivables, Fixed Assets, and period-close process failures.',
+  },
 } as const;
 
 export type CategoryKey = keyof typeof CATEGORIES;
