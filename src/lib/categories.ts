@@ -64,6 +64,11 @@ export const CATEGORIES = {
     color: 'bg-rose-100 text-rose-800',
     description: 'Oracle Identity & Access Management — OAM single sign-on, OIM user provisioning, and OID LDAP directory administration.',
   },
+  'golden-gate-problems': {
+    label: 'GoldenGate: Problems & Solutions',
+    color: 'bg-emerald-100 text-emerald-800',
+    description: 'Oracle GoldenGate production incident case studies, root cause analysis, and resolution patterns for extract lag, apply errors, and replication failures.',
+  },
 } as const;
 
 export type CategoryKey = keyof typeof CATEGORIES;
