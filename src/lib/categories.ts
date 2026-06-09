@@ -74,6 +74,11 @@ export const CATEGORIES = {
     color: 'bg-amber-100 text-amber-800',
     description: 'Oracle E-Business Suite functional module troubleshooting — General Ledger, Payables, Receivables, Fixed Assets, and period-close process failures.',
   },
+  'postgresql': {
+    label: 'PostgreSQL',
+    color: 'bg-blue-100 text-blue-800',
+    description: 'PostgreSQL administration, architecture, performance tuning, replication, and migration — from installation to production operations.',
+  },
 } as const;
 
 export type CategoryKey = keyof typeof CATEGORIES;
