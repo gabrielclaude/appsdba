@@ -79,6 +79,11 @@ export const CATEGORIES = {
     color: 'bg-blue-100 text-blue-800',
     description: 'PostgreSQL administration, architecture, performance tuning, replication, and migration — from installation to production operations.',
   },
+  'oracle-ml': {
+    label: 'Oracle Machine Learning',
+    color: 'bg-sky-100 text-sky-800',
+    description: 'Oracle Machine Learning — in-database algorithms, OML4Py, OML4SQL, AutoML, and integration with Oracle Database for predictive analytics.',
+  },
 } as const;
 
 export type CategoryKey = keyof typeof CATEGORIES;

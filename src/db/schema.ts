@@ -17,6 +17,7 @@ export const categoryEnum = pgEnum('category', [
   'golden-gate-problems',
   'ebs-functional',
   'postgresql',
+  'oracle-ml',
 ]);
 
 export const posts = pgTable('posts', {
