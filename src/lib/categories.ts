@@ -89,6 +89,11 @@ export const CATEGORIES = {
     color: 'bg-teal-100 text-teal-800',
     description: 'Oracle Exalogic and Oracle RAC on VMware — engineered middleware systems, WebLogic cluster deployment, InfiniBand architecture, vSphere integration, and production operations.',
   },
+  'postgres-ml': {
+    label: 'PostgreSQL + ML',
+    color: 'bg-fuchsia-100 text-fuchsia-800',
+    description: 'Full-stack machine learning with PostgreSQL — pgvector embeddings, semantic search, RAG, Python FastAPI middle tier, and Next.js frontend integration.',
+  },
 } as const;
 
 export type CategoryKey = keyof typeof CATEGORIES;
