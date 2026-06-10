@@ -84,6 +84,11 @@ export const CATEGORIES = {
     color: 'bg-sky-100 text-sky-800',
     description: 'Oracle Machine Learning — in-database algorithms, OML4Py, OML4SQL, AutoML, and integration with Oracle Database for predictive analytics.',
   },
+  'exalogic': {
+    label: 'Exalogic',
+    color: 'bg-teal-100 text-teal-800',
+    description: 'Oracle Exalogic and Oracle RAC on VMware — engineered middleware systems, WebLogic cluster deployment, InfiniBand architecture, vSphere integration, and production operations.',
+  },
 } as const;
 
 export type CategoryKey = keyof typeof CATEGORIES;
