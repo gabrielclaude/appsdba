@@ -94,6 +94,11 @@ export const CATEGORIES = {
     color: 'bg-fuchsia-100 text-fuchsia-800',
     description: 'Full-stack machine learning with PostgreSQL — pgvector embeddings, semantic search, RAG, Python FastAPI middle tier, and Next.js frontend integration.',
   },
+  'appsdba': {
+    label: 'AppsDBA',
+    color: 'bg-indigo-100 text-indigo-800',
+    description: 'Oracle Applications DBA case studies — real-world EBS, ASCP, and middleware incident troubleshooting, root cause analysis, and production problem resolution.',
+  },
 } as const;
 
 export type CategoryKey = keyof typeof CATEGORIES;

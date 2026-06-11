@@ -20,6 +20,7 @@ export const categoryEnum = pgEnum('category', [
   'oracle-ml',
   'exalogic',
   'postgres-ml',
+  'appsdba',
 ]);
 
 export const posts = pgTable('posts', {
