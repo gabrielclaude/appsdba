@@ -110,9 +110,17 @@ export default function DWPage() {
     <div className="p-6">
       <div className="flex items-start justify-between mb-4">
         <div>
-          <Link href="/posts/" className="text-xs text-gray-400 hover:text-gray-600 transition mb-1 inline-block">
-            ← Blog
-          </Link>
+          <div className="flex items-center gap-3 mb-1">
+            <Link href="/posts/" className="text-xs text-gray-400 hover:text-gray-600 transition">
+              ← Blog
+            </Link>
+            <Link
+              href="/posts/ebs-concurrent-program-performance-data-warehouse-python-ml"
+              className="text-xs text-emerald-600 hover:text-emerald-800 transition"
+            >
+              How this was built →
+            </Link>
+          </div>
           <h1 className="text-2xl font-bold">Performance Data Warehouse</h1>
           <p className="text-sm text-gray-500">Aggregated from PostgreSQL DW — populated by the Python ETL pipeline</p>
         </div>
