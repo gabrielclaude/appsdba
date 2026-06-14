@@ -9,11 +9,18 @@ export default async function HomePage() {
   return (
     <div>
       <section className="mb-10">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">21st Century Apps DBA</h1>
-        <p className="text-gray-600 max-w-2xl">
-          Practical guides and deep-dives on Oracle Database, E-Business Suite, WebLogic, GoldenGate,
-          Data Guard disaster recovery, Oracle RAC &amp; Clusterware, Exadata, and Essbase — written by a working DBA.
-        </p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">21st Century Apps DBA</h1>
+            <p className="text-gray-600 max-w-2xl">
+              Practical guides and deep-dives on Oracle Database, E-Business Suite, WebLogic, GoldenGate,
+              Data Guard disaster recovery, Oracle RAC &amp; Clusterware, Exadata, and Essbase — written by a working DBA.
+            </p>
+          </div>
+          <Link href="/dw" className="shrink-0 mt-1 text-sm font-medium text-emerald-700 hover:text-emerald-900 hover:underline transition">
+            Performance DW →
+          </Link>
+        </div>
       </section>
 
       <section className="mb-10">
