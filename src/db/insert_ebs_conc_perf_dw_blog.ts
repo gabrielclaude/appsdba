@@ -13,7 +13,7 @@ const post = {
   slug: 'ebs-concurrent-program-performance-data-warehouse-python-ml',
   excerpt:
     'A complete architecture for extracting Oracle EBS concurrent request history and AWR SQL performance data into a PostgreSQL star schema data warehouse, then applying Python machine learning — regression, anomaly detection, clustering, and correlation analysis — to identify slow programs, detect runtime anomalies, predict future durations, and correlate concurrent load spikes with SQL degradation.',
-  category: 'ebs-suite' as const,
+  category: 'performance-dw' as const,
   published: true,
   isPremium: false,
   publishedAt: new Date('2026-06-16'),

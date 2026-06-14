@@ -99,6 +99,11 @@ export const CATEGORIES = {
     color: 'bg-indigo-100 text-indigo-800',
     description: 'Oracle Applications DBA case studies — real-world EBS, ASCP, and middleware incident troubleshooting, root cause analysis, and production problem resolution.',
   },
+  'performance-dw': {
+    label: 'Performance DW',
+    color: 'bg-emerald-100 text-emerald-800',
+    description: 'EBS concurrent program performance data warehouse — star schema design, AWR correlation, Python ML pipelines, anomaly detection, and duration regression.',
+  },
 } as const;
 
 export type CategoryKey = keyof typeof CATEGORIES;
