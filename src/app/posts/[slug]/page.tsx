@@ -64,9 +64,12 @@ export default async function PostPage({ params }: Props) {
 
   return (
     <article className="max-w-3xl mx-auto">
-      <div className="mb-6">
+      <div className="mb-6 flex items-center justify-between">
         <Link href="/" className="text-sm text-blue-600 hover:underline">
           ← All Posts
+        </Link>
+        <Link href="/dw" className="text-sm text-emerald-700 hover:underline font-medium">
+          Performance DW →
         </Link>
       </div>
 
@@ -116,9 +119,12 @@ export default async function PostPage({ params }: Props) {
         />
       )}
 
-      <div className="mt-8 pt-6 border-t">
+      <div className="mt-8 pt-6 border-t flex items-center justify-between">
         <Link href="/" className="text-sm text-blue-600 hover:underline">
           ← Back to all posts
+        </Link>
+        <Link href="/dw" className="text-sm text-emerald-700 hover:underline font-medium">
+          Performance DW →
         </Link>
       </div>
     </article>
