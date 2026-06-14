@@ -18,7 +18,9 @@ const post = {
   isPremium: false,
   publishedAt: new Date('2026-06-16'),
   youtubeUrl: null,
-  content: `Oracle E-Business Suite runs hundreds of concurrent programs every day: interfaces, purges, reports, workflow mailers, cost rollups, payroll processes. Each one is a black box to most monitoring tools — you can see that it ran, how long it took, and whether it succeeded, but you cannot answer questions like:
+  content: `![EBS Performance Data Warehouse — Programs dashboard showing FNDOAMCOL with 330 runs, 55.4m average duration, and anomaly detection](/dw-screenshot.png)
+
+Oracle E-Business Suite runs hundreds of concurrent programs every day: interfaces, purges, reports, workflow mailers, cost rollups, payroll processes. Each one is a black box to most monitoring tools — you can see that it ran, how long it took, and whether it succeeded, but you cannot answer questions like:
 
 - Which programs are running slower this month compared to last month?
 - Does the GL Period Close concurrent manager show longer SQL execution times when more than 20 programs run simultaneously?
