@@ -34,6 +34,21 @@ export default async function HomePage() {
         </div>
       </section>
 
+      <section className="mb-6">
+        <Link
+          href="/posts/ebs-concurrent-program-performance-data-warehouse-python-ml"
+          className="flex items-center justify-between gap-4 p-4 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors group"
+        >
+          <div>
+            <span className="text-xs font-medium text-emerald-700 uppercase tracking-wide">New</span>
+            <p className="text-sm font-semibold text-gray-900 group-hover:text-emerald-800 transition-colors mt-0.5">
+              EBS Concurrent Program Performance: Building a Data Warehouse with AWR Correlation and Python ML
+            </p>
+          </div>
+          <span className="shrink-0 text-emerald-600 font-medium text-sm">Read →</span>
+        </Link>
+      </section>
+
       <section>
         <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">
           Latest Posts
