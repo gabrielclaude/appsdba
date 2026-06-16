@@ -26,6 +26,7 @@ export const categoryEnum = pgEnum('category', [
   'oracle-clinical',
   'fusion-cloud-erp',
   'oracle-security',
+  'ebs-workflow',
 ]);
 
 export const posts = pgTable('posts', {

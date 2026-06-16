@@ -124,6 +124,11 @@ export const CATEGORIES = {
     color: 'bg-slate-100 text-slate-800',
     description: 'Oracle database and application security — Critical Patch Updates, OPatch, vulnerability remediation, audit configuration, and hardening on Linux and Windows.',
   },
+  'ebs-workflow': {
+    label: 'EBS Workflow',
+    color: 'bg-orange-100 text-orange-800',
+    description: 'Oracle E-Business Suite Workflow — Notification Mailer configuration, TLS/STARTTLS troubleshooting, WF_MAILER tuning, and business event system administration.',
+  },
 } as const;
 
 export type CategoryKey = keyof typeof CATEGORIES;
