@@ -104,6 +104,11 @@ export const CATEGORIES = {
     color: 'bg-emerald-100 text-emerald-800',
     description: 'EBS concurrent program performance data warehouse — star schema design, AWR correlation, Python ML pipelines, anomaly detection, and duration regression.',
   },
+  'netsuite': {
+    label: 'NetSuite',
+    color: 'bg-blue-100 text-blue-800',
+    description: 'NetSuite ERP configuration, administration, and best practices — COA design, item master setup, workflow automation, role-based security, and implementation sequencing.',
+  },
 } as const;
 
 export type CategoryKey = keyof typeof CATEGORIES;

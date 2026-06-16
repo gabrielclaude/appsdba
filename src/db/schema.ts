@@ -22,6 +22,7 @@ export const categoryEnum = pgEnum('category', [
   'postgres-ml',
   'appsdba',
   'performance-dw',
+  'netsuite',
 ]);
 
 export const posts = pgTable('posts', {
