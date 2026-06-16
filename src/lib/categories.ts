@@ -114,6 +114,11 @@ export const CATEGORIES = {
     color: 'bg-purple-100 text-purple-800',
     description: 'Oracle Clinical CDMS installation, sizing, DBA administration, and 21 CFR Part 11 compliance — schema management, performance tuning, patching, and clinical data operations.',
   },
+  'fusion-cloud-erp': {
+    label: 'Fusion Cloud ERP',
+    color: 'bg-red-100 text-red-800',
+    description: 'Oracle Fusion Cloud ERP — Financials, Procurement, and Supply Chain Cloud configuration, migration, FBDI data loading, Subledger Accounting, and implementation best practices.',
+  },
 } as const;
 
 export type CategoryKey = keyof typeof CATEGORIES;
