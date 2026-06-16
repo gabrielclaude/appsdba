@@ -119,6 +119,11 @@ export const CATEGORIES = {
     color: 'bg-red-100 text-red-800',
     description: 'Oracle Fusion Cloud ERP — Financials, Procurement, and Supply Chain Cloud configuration, migration, FBDI data loading, Subledger Accounting, and implementation best practices.',
   },
+  'oracle-security': {
+    label: 'Security',
+    color: 'bg-slate-100 text-slate-800',
+    description: 'Oracle database and application security — Critical Patch Updates, OPatch, vulnerability remediation, audit configuration, and hardening on Linux and Windows.',
+  },
 } as const;
 
 export type CategoryKey = keyof typeof CATEGORIES;
