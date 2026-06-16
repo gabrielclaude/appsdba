@@ -23,6 +23,7 @@ export const categoryEnum = pgEnum('category', [
   'appsdba',
   'performance-dw',
   'netsuite',
+  'oracle-clinical',
 ]);
 
 export const posts = pgTable('posts', {

@@ -109,6 +109,11 @@ export const CATEGORIES = {
     color: 'bg-blue-100 text-blue-800',
     description: 'NetSuite ERP configuration, administration, and best practices — COA design, item master setup, workflow automation, role-based security, and implementation sequencing.',
   },
+  'oracle-clinical': {
+    label: 'Oracle Clinical',
+    color: 'bg-purple-100 text-purple-800',
+    description: 'Oracle Clinical CDMS installation, sizing, DBA administration, and 21 CFR Part 11 compliance — schema management, performance tuning, patching, and clinical data operations.',
+  },
 } as const;
 
 export type CategoryKey = keyof typeof CATEGORIES;
