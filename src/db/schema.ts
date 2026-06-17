@@ -27,6 +27,8 @@ export const categoryEnum = pgEnum('category', [
   'fusion-cloud-erp',
   'oracle-security',
   'ebs-workflow',
+  'oracle-retail',
+  'oracle-agile',
 ]);
 
 export const posts = pgTable('posts', {

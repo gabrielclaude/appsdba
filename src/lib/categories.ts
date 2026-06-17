@@ -129,6 +129,16 @@ export const CATEGORIES = {
     color: 'bg-orange-100 text-orange-800',
     description: 'Oracle E-Business Suite Workflow — Notification Mailer configuration, TLS/STARTTLS troubleshooting, WF_MAILER tuning, and business event system administration.',
   },
+  'oracle-retail': {
+    label: 'Oracle Retail',
+    color: 'bg-cyan-100 text-cyan-800',
+    description: 'Oracle Retail suite — ORPOS, RMS, RPAS demand forecasting, SIOCS inventory, OMS order management, and retail DBA implementation and administration.',
+  },
+  'oracle-agile': {
+    label: 'Oracle Agile',
+    color: 'bg-lime-100 text-lime-800',
+    description: 'Oracle Agile PLM — product lifecycle management implementation, configuration, integration with EBS and Fusion, BOM management, ECO workflows, and DBA administration.',
+  },
 } as const;
 
 export type CategoryKey = keyof typeof CATEGORIES;
