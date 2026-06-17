@@ -139,6 +139,11 @@ export const CATEGORIES = {
     color: 'bg-lime-100 text-lime-800',
     description: 'Oracle Agile PLM — product lifecycle management implementation, configuration, integration with EBS and Fusion, BOM management, ECO workflows, and DBA administration.',
   },
+  'oracle-siebel': {
+    label: 'Oracle Siebel',
+    color: 'bg-indigo-100 text-indigo-800',
+    description: 'Oracle Siebel CRM — enterprise CRM implementation, Siebel Server architecture, AOM configuration, schema administration, EAI integration, workflow, and DBA operations.',
+  },
 } as const;
 
 export type CategoryKey = keyof typeof CATEGORIES;

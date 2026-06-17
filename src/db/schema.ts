@@ -29,6 +29,7 @@ export const categoryEnum = pgEnum('category', [
   'ebs-workflow',
   'oracle-retail',
   'oracle-agile',
+  'oracle-siebel',
 ]);
 
 export const posts = pgTable('posts', {
