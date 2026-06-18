@@ -30,7 +30,7 @@ export default async function HomePage() {
             <Link
               key={key}
               href={`/category/${key}`}
-              className="group p-3 bg-white rounded-lg border border-gray-200 hover:shadow-md transition-shadow"
+              className="group p-3 bg-[#fdf6e3] rounded-lg border border-[#e8dcc8] hover:shadow-md transition-shadow"
             >
               <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded mb-2 ${color}`}>
                 {label}

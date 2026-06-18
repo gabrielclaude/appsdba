@@ -13,11 +13,11 @@ export function PostCard({ post }: PostCardProps) {
   const categoryKey = post.category as CategoryKey;
 
   return (
-    <Card className="hover:shadow-md transition-shadow border-gray-200">
+    <Card className="hover:shadow-md transition-shadow bg-[#fdf6e3] ring-[#e8dcc8]">
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-3">
           <Link href={`/posts/${post.slug}`} className="group flex-1">
-            <h2 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors leading-snug">
+            <h2 className="text-xl font-semibold text-gray-900 group-hover:text-blue-600 transition-colors leading-snug">
               {post.title}
             </h2>
           </Link>
@@ -35,10 +35,10 @@ export function PostCard({ post }: PostCardProps) {
       </CardHeader>
       <CardContent>
         {post.excerpt && (
-          <p className="text-gray-600 text-sm leading-relaxed mb-3">{post.excerpt}</p>
+          <p className="text-gray-700 text-base leading-relaxed mb-3">{post.excerpt}</p>
         )}
         <div className="flex items-center justify-between">
-          <time className="text-xs text-gray-400">
+          <time className="text-sm text-gray-500">
             {post.publishedAt
               ? new Date(post.publishedAt).toLocaleDateString('en-US', {
                   year: 'numeric',
