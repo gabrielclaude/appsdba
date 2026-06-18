@@ -175,7 +175,7 @@ CREATE DATABASE awrdw
   LC_COLLATE 'en_US.UTF-8'
   LC_CTYPE   'en_US.UTF-8';
 
-CREATE USER awrdw_user WITH PASSWORD 'DWpassword1#';
+CREATE USER awrdw_user WITH PASSWORD '<your_secure_password>';
 GRANT ALL PRIVILEGES ON DATABASE awrdw TO awrdw_user;
 \c awrdw
 GRANT ALL ON SCHEMA public TO awrdw_user;
@@ -349,11 +349,11 @@ pip freeze > requirements.txt
 \`\`\`bash
 cat > /opt/awrdw/.env << 'EOF'
 ORA_USER=awr_export
-ORA_PASSWORD=StrongPassword1#
+ORA_PASSWORD=<your_oracle_password>
 ORA_DSN=oradb01.corp.local:1521/ORCL
 ORA_DBID=1234567890
 
-PG_DSN=postgresql://awrdw_user:DWpassword1#@pgdw01.corp.local:5432/awrdw
+PG_DSN=postgresql://awrdw_user:<your_secure_password>@pgdw01.corp.local:5432/awrdw
 
 LOG_DIR=/opt/awrdw/logs
 MODEL_DIR=/opt/awrdw/models
