@@ -35,7 +35,7 @@ export default async function CategoryPage({ params }: Props) {
   return (
     <div>
       <div className="mb-6">
-        <Link href="/" className="text-sm text-blue-600 hover:underline">
+        <Link href="/" className="text-sm text-[#FF8C42] hover:text-[#FFE4A0] hover:underline transition-colors">
           ← All Posts
         </Link>
       </div>
@@ -44,12 +44,12 @@ export default async function CategoryPage({ params }: Props) {
         <span className={`inline-block text-sm font-medium px-3 py-1 rounded-full mb-3 ${color}`}>
           {label}
         </span>
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">{label}</h1>
-        <p className="text-gray-600">{description}</p>
+        <h1 className="text-2xl font-bold text-[#FFE4A0] mb-2">{label}</h1>
+        <p className="text-[#FFCB8E]">{description}</p>
       </header>
 
       {posts.length === 0 ? (
-        <p className="text-gray-500">No posts in this category yet.</p>
+        <p className="text-[#FFCB8E]">No posts in this category yet.</p>
       ) : (
         <div className="grid gap-4">
           {posts.map((post) => (

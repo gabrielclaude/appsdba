@@ -65,10 +65,10 @@ export default async function PostPage({ params }: Props) {
   return (
     <article className="max-w-[67rem] mx-auto px-4">
       <div className="mb-6 flex items-center justify-between">
-        <Link href="/" className="text-sm text-blue-600 hover:underline">
+        <Link href="/" className="text-sm text-[#FF8C42] hover:text-[#FFE4A0] hover:underline transition-colors">
           ← All Posts
         </Link>
-        <Link href="/dw" className="text-sm text-emerald-700 hover:underline font-medium">
+        <Link href="/dw" className="text-sm text-[#5EEAD4] hover:underline font-medium">
           Performance DW →
         </Link>
       </div>
@@ -84,12 +84,12 @@ export default async function PostPage({ params }: Props) {
             </span>
           )}
         </div>
-        <h1 className="text-4xl font-bold text-gray-900 leading-tight mb-3">{post.title}</h1>
+        <h1 className="text-4xl font-bold text-[#FFE4A0] leading-tight mb-3">{post.title}</h1>
         {post.excerpt && (
-          <p className="text-xl text-gray-600 leading-relaxed">{post.excerpt}</p>
+          <p className="text-xl text-[#FFCB8E] leading-relaxed">{post.excerpt}</p>
         )}
         {post.publishedAt && (
-          <time className="text-sm text-gray-400 mt-3 block">
+          <time className="text-sm text-[#E8693C] mt-3 block">
             {new Date(post.publishedAt).toLocaleDateString('en-US', {
               year: 'numeric',
               month: 'long',
@@ -107,7 +107,7 @@ export default async function PostPage({ params }: Props) {
         <VideoPlayer url={post.videoUrl} title={post.title} />
       )}
 
-      <div className={`bg-[#fdf6e3] rounded-xl border border-[#e8dcc8] p-8 sm:p-12 ${isLocked ? 'relative overflow-hidden' : ''}`}>
+      <div className={`bg-[#FFF3B0] rounded-xl border border-[#C8A84B] p-8 sm:p-12 paper-texture ${isLocked ? 'relative overflow-hidden' : ''}`}>
         <PostContent content={displayContent} />
       </div>
 
@@ -119,11 +119,11 @@ export default async function PostPage({ params }: Props) {
         />
       )}
 
-      <div className="mt-8 pt-6 border-t flex items-center justify-between">
-        <Link href="/" className="text-sm text-blue-600 hover:underline">
+      <div className="mt-8 pt-6 border-t border-[#3D1F4E] flex items-center justify-between">
+        <Link href="/" className="text-sm text-[#FF8C42] hover:text-[#FFE4A0] hover:underline transition-colors">
           ← Back to all posts
         </Link>
-        <Link href="/dw" className="text-sm text-emerald-700 hover:underline font-medium">
+        <Link href="/dw" className="text-sm text-[#5EEAD4] hover:underline font-medium">
           Performance DW →
         </Link>
       </div>
