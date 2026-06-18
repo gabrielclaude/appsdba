@@ -35,13 +35,13 @@ export function PostContent({ content }: PostContentProps) {
       );
     } else if (line.startsWith('## ')) {
       elements.push(
-        <h2 key={key()} className="text-xl font-bold text-gray-900 mt-8 mb-3 border-b pb-2">
+        <h2 key={key()} className="text-2xl font-bold text-gray-900 mt-10 mb-4 border-b border-[#d4c4a8] pb-2">
           {line.slice(3)}
         </h2>
       );
     } else if (line.startsWith('### ')) {
       elements.push(
-        <h3 key={key()} className="text-lg font-semibold text-gray-800 mt-6 mb-2">
+        <h3 key={key()} className="text-xl font-semibold text-gray-800 mt-8 mb-3">
           {line.slice(4)}
         </h3>
       );
@@ -52,7 +52,7 @@ export function PostContent({ content }: PostContentProps) {
         i++;
       }
       elements.push(
-        <ul key={key()} className="list-disc list-inside space-y-1 my-3 text-gray-700">
+        <ul key={key()} className="list-disc list-inside space-y-2 my-4 text-gray-800 text-lg leading-relaxed">
           {items.map((item, idx) => (
             <li key={idx} dangerouslySetInnerHTML={{ __html: formatInline(item) }} />
           ))}
@@ -60,12 +60,12 @@ export function PostContent({ content }: PostContentProps) {
       );
       continue;
     } else if (line.trim() === '') {
-      elements.push(<div key={key()} className="h-2" />);
+      elements.push(<div key={key()} className="h-3" />);
     } else {
       elements.push(
         <p
           key={key()}
-          className="text-gray-700 leading-relaxed my-2"
+          className="text-gray-800 text-lg leading-[1.85] my-3"
           dangerouslySetInnerHTML={{ __html: formatInline(line) }}
         />
       );
@@ -82,5 +82,5 @@ function formatInline(text: string): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/`(.+?)`/g, '<code class="bg-gray-100 text-red-700 px-1 py-0.5 rounded text-sm font-mono">$1</code>');
+    .replace(/`(.+?)`/g, '<code class="bg-[#f0e8d5] text-red-800 px-1.5 py-0.5 rounded text-base font-mono border border-[#d4c4a8]">$1</code>');
 }
