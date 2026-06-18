@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { CATEGORIES } from '@/lib/categories';
+import { SearchBox } from './SearchBox';
 
 const clerkEnabled = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
 
@@ -43,6 +44,7 @@ export async function Header() {
           </Link>
 
           <div className="flex items-center gap-3 shrink-0">
+            <SearchBox />
             <Link
               href="/pricing"
               className="text-xs text-amber-400 hover:text-amber-300 font-medium transition-colors hidden sm:block"
