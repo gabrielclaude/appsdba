@@ -1,6 +1,5 @@
 import { config } from 'dotenv';
 config({ path: '.env.local' });
-
 import { drizzle } from 'drizzle-orm/neon-http';
 import { neon } from '@neondatabase/serverless';
 import { posts } from './schema';
@@ -8,724 +7,823 @@ import { posts } from './schema';
 const sql = neon(process.env.DATABASE_URL!);
 const db = drizzle({ client: sql });
 
-const post = {
-  title: 'Oracle EBS SYSAUX Tablespace Management: Space Recovery and Monitoring Runbook',
-  slug: 'oracle-ebs-sysaux-tablespace-management-runbook',
-  excerpt:
-    'Step-by-step runbook for managing SYSAUX tablespace growth in Oracle EBS production environments: occupant analysis, AWR retention tuning and snapshot purge, optimizer statistics history reduction, SQL Plan Management cleanup, emergency datafile expansion, and a monitoring script with configurable thresholds that tracks SYSAUX usage, growth rate, and occupant trends.',
-  category: 'appsdba' as const,
-  published: true,
-  isPremium: true,
-  publishedAt: new Date('2026-06-16'),
-  youtubeUrl: null,
-  content: `## Scope
+async function main() {
+  const post = {
+    title: 'SYSAUX Tablespace Reclamation Runbook — AWR Rebuild and Optimizer Stats Purge',
+    slug: 'oracle-sysaux-tablespace-growth-runbook',
+    excerpt:
+      'Step-by-step DBA runbook for reclaiming a severely bloated SYSAUX tablespace on Oracle 11gR2/12c/19c. Covers all eight phases: assessment, AWR disable, RESTRICT restart, AWR repository rebuild, optimizer stats purge, WRI\$_OPTSTAT shrink, ORA-01502 index fix, high watermark reclamation, and AWR restore — with shell diagnostic scripts, generated DDL, and monitoring alerts.',
+    category: 'oracle-database' as const,
+    isPremium: true,
+    published: true,
+    publishedAt: new Date('2026-06-18'),
+    content: `## Scope and Prerequisites
 
-This runbook applies to Oracle Database 11g, 12c, 19c, and 21c installations hosting Oracle EBS R12.x. All procedures require DBA or SYSDBA access. No application downtime is required for any retention or purge operation — all steps are online.
+This runbook applies to Oracle Database 11gR2, 12c, and 19c single-instance and RAC databases where SYSAUX has grown beyond a manageable size due to unchecked AWR snapshot retention, runaway optimizer statistics history (SM/OPT occupant), or both.
 
-**Triggering conditions for this runbook:**
-- SYSAUX tablespace usage exceeds 80%
-- AWR snapshot failures logged in the alert log (\`ORA-1688\`, \`ORA-1652\`)
-- Optimizer statistics collection errors referencing SYSAUX
-- SYSAUX growth rate exceeding 1 GB/week unexpectedly
-- Proactive monthly SYSAUX maintenance window
+**Triggering conditions:**
+- SYSAUX tablespace usage exceeds 80% and does not decrease after a normal background purge cycle
+- \`V\$SYSAUX_OCCUPANTS\` shows SM/AWR or SM/OPT consuming more than 50 GB
+- AWR snapshot failures in the alert log (\`ORA-1688\`, \`ORA-1652\`)
+- SYSAUX datafiles were recently added to cope with growth rather than resolving root cause
+
+**What you need:**
+- SYSDBA access
+- A maintenance window for the RESTRICT restart (Phases 2 and 3 require no user connections)
+- Access to \`\$ORACLE_HOME/rdbms/admin\` on the database server
+- Disk space on the OS equal to current SYSAUX size (for the worst-case where the AWR rebuild generates temp objects)
+
+**Estimated duration:** 2–6 hours depending on the size of the WRI\$_OPTSTAT tables and the number of datafiles to resize.
 
 ---
 
-## Phase 1: Assess Current SYSAUX State
+## Phase 0: Assess
 
-### 1.1 Tablespace size, used, and free
+Run all assessment queries before taking any action. Document the baseline so you can confirm improvement at the end.
 
-\`\`\`sql
--- Full SYSAUX capacity picture
-SELECT df.tablespace_name,
-       ROUND(df.total_mb, 0)                            AS total_mb,
-       ROUND(df.total_mb - NVL(fs.free_mb, 0), 0)      AS used_mb,
-       ROUND(NVL(fs.free_mb, 0), 0)                     AS free_mb,
-       ROUND((df.total_mb - NVL(fs.free_mb,0))
-             / df.total_mb * 100, 1)                    AS pct_used,
-       df.file_count,
-       df.max_autoextend_gb
-FROM (
-    SELECT tablespace_name,
-           SUM(bytes) / 1048576              AS total_mb,
-           COUNT(*)                           AS file_count,
-           ROUND(SUM(maxbytes) / 1073741824)  AS max_autoextend_gb
-    FROM   dba_data_files
-    GROUP BY tablespace_name
-) df
-LEFT JOIN (
-    SELECT tablespace_name, SUM(bytes) / 1048576 AS free_mb
-    FROM   dba_free_space
-    GROUP BY tablespace_name
-) fs USING (tablespace_name)
-WHERE df.tablespace_name = 'SYSAUX';
-\`\`\`
-
-### 1.2 Occupant breakdown
+### 0.1 SYSAUX occupants — identify dominant consumers
 
 \`\`\`sql
--- All SYSAUX occupants with space used
 SELECT occupant_name,
        schema_name,
        ROUND(space_usage_kbytes / 1048576, 2) AS space_gb,
-       ROUND(space_usage_kbytes / 1024, 0)    AS space_mb,
-       move_procedure
-FROM   v\$sysaux_occupants
-WHERE  space_usage_kbytes > 0
+       ROUND(space_usage_kbytes / 1024, 0)    AS space_mb
+FROM v\$sysaux_occupants
 ORDER BY space_usage_kbytes DESC;
 \`\`\`
 
-### 1.3 Top 20 segments in SYSAUX by size
+Key occupants to watch:
+- **SM/AWR** — AWR snapshot data in \`WRH\$_*\` tables
+- **SM/OPT** — optimizer statistics history in \`WRI\$_OPTSTAT_*\` tables
+- **SM/OPTSTAT** — same occupant, different view alias on some Oracle versions
+
+### 0.2 Top segments in SYSAUX by size
 
 \`\`\`sql
 SELECT owner,
        segment_name,
        segment_type,
        ROUND(SUM(bytes) / 1048576, 0) AS size_mb
-FROM   dba_segments
-WHERE  tablespace_name = 'SYSAUX'
+FROM dba_segments
+WHERE tablespace_name = 'SYSAUX'
 GROUP BY owner, segment_name, segment_type
 ORDER BY size_mb DESC
-FETCH FIRST 20 ROWS ONLY;
+FETCH FIRST 25 ROWS ONLY;
 \`\`\`
 
-### 1.4 Current AWR configuration
+### 0.3 AWR retention and snapshot count
 
 \`\`\`sql
-SELECT dbid,
-       snap_interval,
-       retention,
-       most_recent_snap_id,
-       most_recent_snap_time,
-       topnsql
-FROM   dba_hist_wr_control;
+SELECT retention FROM dba_hist_wr_control;
+
+SELECT COUNT(*) AS total_snapshots,
+       MIN(begin_interval_time) AS oldest_snap,
+       MAX(end_interval_time)   AS newest_snap,
+       ROUND(MAX(end_interval_time) - MIN(begin_interval_time), 0) AS days_retained
+FROM dba_hist_snapshot;
 \`\`\`
 
-### 1.5 AWR snapshot count and date range
+If \`days_retained\` is greater than 60 or \`total_snapshots\` is greater than 100,000, AWR is a primary contributor.
+
+### 0.4 WRI\$_OPTSTAT table sizes
 
 \`\`\`sql
-SELECT COUNT(*)                          AS total_snapshots,
-       MIN(begin_interval_time)          AS oldest_snapshot,
-       MAX(end_interval_time)            AS newest_snapshot,
-       ROUND(MAX(end_interval_time) - MIN(begin_interval_time)) AS days_retained
-FROM   dba_hist_snapshot;
-\`\`\`
-
-### 1.6 Optimizer statistics history current retention
-
-\`\`\`sql
-SELECT dbms_stats.get_stats_history_retention AS retention_days,
-       dbms_stats.get_stats_history_availability AS oldest_available
-FROM   dual;
-\`\`\`
-
-### 1.7 SQL Plan Management baseline count and space
-
-\`\`\`sql
-SELECT COUNT(*)                            AS total_baselines,
-       SUM(CASE WHEN accepted = 'YES' THEN 1 ELSE 0 END) AS accepted,
-       SUM(CASE WHEN accepted = 'NO'  THEN 1 ELSE 0 END) AS unaccepted,
-       SUM(CASE WHEN enabled  = 'NO'  THEN 1 ELSE 0 END) AS disabled
-FROM   dba_sql_plan_baselines;
-
--- SPM space in SYSAUX
 SELECT segment_name,
        ROUND(SUM(bytes) / 1048576, 0) AS size_mb
-FROM   dba_segments
-WHERE  tablespace_name = 'SYSAUX'
-  AND  segment_name IN ('SQLOBJ\$','SQLOBJ\$AUXDATA','SQLOBJ\$DATA',
-                        'SQL\$','SQL\$TEXT','SQLOBJ\$PLAN')
+FROM dba_segments
+WHERE tablespace_name = 'SYSAUX'
+  AND segment_name LIKE 'WRI\$_OPTSTAT%'
 GROUP BY segment_name
 ORDER BY size_mb DESC;
 \`\`\`
 
----
-
-## Phase 2: Reduce AWR Retention
-
-### 2.1 Set new retention period
-
-The EBS-recommended retention for production is 14–30 days depending on your reporting cycle. Do not go below 7 days or you lose the ability to compare week-over-week performance.
+### 0.5 Optimizer statistics history retention
 
 \`\`\`sql
--- Change retention to 14 days (20,160 minutes) with hourly snapshots
-BEGIN
-  DBMS_WORKLOAD_REPOSITORY.MODIFY_SNAPSHOT_SETTINGS(
-    retention => 20160,   -- 14 days in minutes
-    interval  => 60       -- 60-minute snapshot interval
-  );
-END;
+SELECT dbms_stats.get_stats_history_retention AS retention_days FROM dual;
+\`\`\`
+
+Default is 31 days. Anything higher is a risk factor.
+
+### 0.6 SYSAUX datafiles — current allocation
+
+\`\`\`sql
+SELECT file_id,
+       file_name,
+       ROUND(bytes / 1073741824, 1)    AS current_gb,
+       autoextensible,
+       ROUND(maxbytes / 1073741824, 1) AS max_gb
+FROM dba_data_files
+WHERE tablespace_name = 'SYSAUX'
+ORDER BY file_id;
+\`\`\`
+
+### 0.7 Invalid indexes in SYSAUX (baseline)
+
+\`\`\`sql
+SELECT owner, index_name, status, tablespace_name
+FROM dba_indexes
+WHERE tablespace_name = 'SYSAUX'
+  AND status <> 'VALID'
+ORDER BY owner, index_name;
+\`\`\`
+
+---
+
+## Phase 1: Disable AWR Snapshots
+
+Before any maintenance, stop AWR from writing new snapshots. This prevents new data from landing while you are purging:
+
+\`\`\`sql
+EXEC DBMS_WORKLOAD_REPOSITORY.MODIFY_SNAPSHOT_SETTINGS(interval => 0);
+
+-- Confirm
+SELECT snap_interval FROM dba_hist_wr_control;
+-- snap_interval should be +00000 00:00:00.0 (zero = disabled)
+\`\`\`
+
+AWR disable takes effect immediately. Existing snapshot data is not deleted.
+
+---
+
+## Phase 2: Maintenance Window — Restart in RESTRICT
+
+The AWR repository rebuild scripts (Phase 3) require exclusive access to SYS-owned objects. Start the database in RESTRICT mode to prevent non-DBA connections:
+
+\`\`\`sql
+SHUTDOWN IMMEDIATE;
+STARTUP RESTRICT;
+\`\`\`
+
+Verify that only DBA sessions are connected:
+
+\`\`\`sql
+SELECT username, status, program
+FROM v\$session
+WHERE type = 'USER'
+ORDER BY username;
+\`\`\`
+
+If any non-SYS, non-SYSTEM session appears, investigate before proceeding. The RESTRICT startup rejects new connections from users without the RESTRICTED SESSION privilege but does not kill existing sessions that connected before the restart.
+
+---
+
+## Phase 3: Rebuild AWR Repository
+
+This phase is the most impactful step for SM/AWR bloat. It destroys all existing AWR history and recreates the schema. Only proceed if you have confirmed that the historical AWR data has no operational value and you accept its loss.
+
+\`\`\`sql
+-- Step 1: Drop all AWR objects
+@\$ORACLE_HOME/rdbms/admin/catnoawr.sql
+
+-- Step 2: Clear the recyclebin to remove any lingering AWR objects
+PURGE DBA_RECYCLEBIN;
+
+-- Step 3: Recreate the AWR schema
+@\$ORACLE_HOME/rdbms/admin/catawrtb.sql
+
+-- Step 4: Recompile any invalid objects
+@\$ORACLE_HOME/rdbms/admin/utlrp.sql
+\`\`\`
+
+After \`utlrp.sql\` completes, confirm no invalid objects remain:
+
+\`\`\`sql
+SELECT COUNT(*) FROM dba_objects WHERE status = 'INVALID';
+\`\`\`
+
+If invalid objects remain, check whether they are Oracle-owned (unlikely after utlrp) or user-owned (less critical). Do not proceed with Phase 4 if any SYS-owned objects are invalid.
+
+Check the SM/AWR occupant size after rebuild:
+
+\`\`\`sql
+SELECT occupant_name, ROUND(space_usage_kbytes / 1048576, 2) AS space_gb
+FROM v\$sysaux_occupants
+WHERE occupant_name IN ('SM/AWR','SM/OPT','SM/OPTSTAT')
+ORDER BY space_usage_kbytes DESC;
+\`\`\`
+
+---
+
+## Phase 4: Purge Optimizer Statistics History
+
+After the AWR rebuild, optimizer statistics history (SM/OPT) is typically the remaining dominant occupant. Purge it using \`DBMS_STATS\`:
+
+### 4.1 Check current retention
+
+\`\`\`sql
+SELECT dbms_stats.get_stats_history_retention AS retention_days FROM dual;
+\`\`\`
+
+### 4.2 Full purge — all history
+
+Use this when the statistics history is entirely stale or the database has been cloned from an environment where it accumulated without value:
+
+\`\`\`sql
+EXEC DBMS_STATS.PURGE_STATS(DBMS_STATS.PURGE_ALL);
+\`\`\`
+
+This call can run for 20–60 minutes on a large database. Monitor from a second session:
+
+\`\`\`sql
+SELECT opname, target, sofar, totalwork,
+       ROUND(sofar / NULLIF(totalwork, 0) * 100, 1) AS pct_done,
+       elapsed_seconds
+FROM v\$session_longops
+WHERE sofar < totalwork
+  AND last_update_time > SYSDATE - 1/24
+ORDER BY last_update_time DESC;
+\`\`\`
+
+### 4.3 Targeted purge — keep recent history
+
+If you want to retain recent statistics history for plan regression troubleshooting:
+
+\`\`\`sql
+-- Keep the last 10 days of statistics history
+EXEC DBMS_STATS.PURGE_STATS(SYSDATE - 10);
+\`\`\`
+
+### 4.4 Set a permanent retention going forward
+
+After the purge, set a retention that prevents re-accumulation. 14 days is recommended for most production databases:
+
+\`\`\`sql
+BEGIN DBMS_STATS.ALTER_STATS_HISTORY_RETENTION(14); END;
 /
+
+-- Confirm
+SELECT dbms_stats.get_stats_history_retention FROM dual;
+\`\`\`
+
+---
+
+## Phase 5: Move and Shrink WRI\$_OPTSTAT Tables
+
+After purging the rows, the segments still occupy the original extents — the high watermark has not moved. Shrink or move each table to release extents back to the tablespace.
+
+### 5.1 Generate the enable row movement DDL
+
+\`\`\`sql
+SELECT 'ALTER TABLE '||owner||'.'||segment_name||' ENABLE ROW MOVEMENT;'
+FROM dba_segments
+WHERE tablespace_name = 'SYSAUX'
+  AND segment_name LIKE 'WRI\$_OPTSTAT%'
+  AND segment_type = 'TABLE'
+ORDER BY bytes DESC;
+\`\`\`
+
+Execute each generated statement.
+
+### 5.2 Generate and execute the shrink DDL
+
+\`\`\`sql
+SELECT 'ALTER TABLE '||owner||'.'||segment_name||' SHRINK SPACE CASCADE;'
+FROM dba_segments
+WHERE tablespace_name = 'SYSAUX'
+  AND segment_name LIKE 'WRI\$_OPTSTAT%'
+  AND segment_type = 'TABLE'
+ORDER BY bytes DESC;
+\`\`\`
+
+\`SHRINK SPACE CASCADE\` shrinks the table and all of its dependent indexes in one command. It is an online operation and does not prevent DML, but it generates redo — run the largest tables during off-peak hours.
+
+### 5.3 Disable row movement after shrink
+
+\`\`\`sql
+SELECT 'ALTER TABLE '||owner||'.'||segment_name||' DISABLE ROW MOVEMENT;'
+FROM dba_segments
+WHERE tablespace_name = 'SYSAUX'
+  AND segment_name LIKE 'WRI\$_OPTSTAT%'
+  AND segment_type = 'TABLE'
+ORDER BY bytes DESC;
+\`\`\`
+
+### 5.4 Alternative: MOVE instead of SHRINK
+
+If \`SHRINK SPACE\` is slow or fails on a particular table, \`MOVE\` is a full rebuild into new extents:
+
+\`\`\`sql
+ALTER TABLE SYS.WRI\$_OPTSTAT_TAB_HISTORY MOVE TABLESPACE SYSAUX;
+\`\`\`
+
+After \`MOVE\`, all indexes on the table become unusable. Rebuild them immediately (see Phase 6).
+
+---
+
+## Phase 6: Fix ORA-01502 — Rebuild Blocking Index First
+
+After shrinking or moving the \`WRI\$_OPTSTAT\` tables, some indexes will be in UNUSABLE state. When you attempt to rebuild them, you may encounter:
+
+\`\`\`
+ORA-01502: index 'SYS.I_WRI\$_OPTSTAT_IND_OBJ#_ST' or partition of such index is in unusable state
+\`\`\`
+
+This error can appear when rebuilding a *different* index — not the one named. \`I_WRI\$_OPTSTAT_IND_OBJ#_ST\` is a parent index that other SYSAUX indexes depend on during the rebuild operation. If it is unusable, all dependent index rebuilds will fail with ORA-01502.
+
+**The fix: rebuild this index first, before all others.**
+
+\`\`\`sql
+-- Step 1: Rebuild the blocking parent index
+ALTER INDEX SYS.I_WRI\$_OPTSTAT_IND_OBJ#_ST REBUILD ONLINE;
+
+-- Step 2: Confirm it is now VALID
+SELECT status FROM dba_indexes
+WHERE owner = 'SYS' AND index_name = 'I_WRI\$_OPTSTAT_IND_OBJ#_ST';
+-- Expected: VALID
+\`\`\`
+
+### 6.1 Identify all remaining invalid SYSAUX indexes
+
+\`\`\`sql
+SELECT 'ALTER INDEX '||owner||'.'||index_name||' REBUILD;' AS cmd
+FROM dba_indexes
+WHERE tablespace_name = 'SYSAUX'
+  AND status <> 'VALID'
+ORDER BY owner, index_name;
+\`\`\`
+
+Execute each generated \`ALTER INDEX ... REBUILD\` statement. For large indexes, add the \`ONLINE\` clause to avoid locking:
+
+\`\`\`sql
+ALTER INDEX SYS.I_WRI\$_OPTSTAT_IND_OBJ#_ST   REBUILD ONLINE;
+ALTER INDEX SYS.I_WRI\$_OPTSTAT_TAB_OBJ#_ST   REBUILD ONLINE;
+ALTER INDEX SYS.I_WRI\$_OPTSTAT_H_OBJ#_ICOL#_ST REBUILD ONLINE;
+ALTER INDEX SYS.I_WRI\$_OPTSTAT_HH_OBJ#_ICOL#_ST REBUILD ONLINE;
+\`\`\`
+
+### 6.2 Confirm all indexes valid
+
+\`\`\`sql
+SELECT owner, index_name, status
+FROM dba_indexes
+WHERE tablespace_name = 'SYSAUX'
+  AND status <> 'VALID'
+ORDER BY owner, index_name;
+-- Zero rows = all valid
+\`\`\`
+
+---
+
+## Phase 7: Reclaim Disk Space — Move HWM and Resize Datafiles
+
+Free space inside the tablespace does not translate to disk space reclamation until the datafiles are resized. To resize, you first need to ensure no extents are allocated near the end of each datafile.
+
+### 7.1 Find the minimum safe resize size for each datafile
+
+\`\`\`sql
+SELECT e.file_id,
+       df.file_name,
+       ROUND(df.bytes / 1073741824, 2)                            AS current_gb,
+       ROUND((MAX(e.block_id + e.blocks - 1) * 8192) / 1073741824 + 1, 1) AS min_safe_gb
+FROM dba_extents e
+JOIN dba_data_files df ON df.file_id = e.file_id
+WHERE df.tablespace_name = 'SYSAUX'
+GROUP BY e.file_id, df.file_name, df.bytes
+ORDER BY e.file_id;
+\`\`\`
+
+If \`current_gb\` greatly exceeds \`min_safe_gb\` for any file, that file can be shrunk.
+
+### 7.2 Move segments that are blocking a datafile resize
+
+If any segment is allocated near the top of a datafile, it must be moved before the file can be resized. Generate the move DDL:
+
+\`\`\`sql
+-- Segments in the top 20% of each SYSAUX datafile
+SELECT 'ALTER TABLE '||e.owner||'.'||e.segment_name||' MOVE TABLESPACE SYSAUX;' AS cmd,
+       e.file_id,
+       ROUND(e.block_id * 8192 / 1073741824, 2) AS start_gb
+FROM dba_extents e
+JOIN dba_data_files df ON df.file_id = e.file_id
+WHERE df.tablespace_name = 'SYSAUX'
+  AND e.segment_type = 'TABLE'
+  AND e.block_id * 8192 > df.bytes * 0.8
+ORDER BY e.file_id, e.block_id DESC;
+\`\`\`
+
+After moving each table, rebuild its indexes immediately:
+
+\`\`\`sql
+SELECT 'ALTER INDEX '||owner||'.'||index_name||' REBUILD;' AS cmd
+FROM dba_indexes
+WHERE table_name = '<MOVED_TABLE_NAME>'
+  AND status = 'UNUSABLE';
+\`\`\`
+
+### 7.3 Resize the datafiles
+
+After moving blocking segments, resize each datafile to its safe minimum plus a buffer (add at least 10% headroom for growth before the next maintenance window):
+
+\`\`\`sql
+-- Example: resize each datafile (replace paths and sizes with your values from 7.1)
+ALTER DATABASE DATAFILE '/path/to/sysaux01.dbf' RESIZE 8G;
+ALTER DATABASE DATAFILE '/path/to/sysaux02.dbf' RESIZE 4G;
+\`\`\`
+
+If \`ALTER DATABASE DATAFILE ... RESIZE\` fails with \`ORA-03297: file contains used data beyond requested RESIZE value\`, a segment is still allocated beyond the target size — go back to step 7.2 and move it.
+
+### 7.4 Confirm reclamation
+
+\`\`\`sql
+-- Compare to the Phase 0 baseline
+SELECT file_name,
+       ROUND(bytes / 1073741824, 1) AS current_gb
+FROM dba_data_files
+WHERE tablespace_name = 'SYSAUX'
+ORDER BY file_id;
+
+SELECT occupant_name, ROUND(space_usage_kbytes / 1048576, 2) AS space_gb
+FROM v\$sysaux_occupants
+ORDER BY space_usage_kbytes DESC;
+\`\`\`
+
+---
+
+## Phase 8: Restore and Validate
+
+### 8.1 Re-enable AWR with correct retention
+
+\`\`\`sql
+-- 60-minute intervals, 30-day retention (43200 minutes)
+EXEC DBMS_WORKLOAD_REPOSITORY.MODIFY_SNAPSHOT_SETTINGS(interval => 60, retention => 43200);
 
 -- Verify
 SELECT snap_interval, retention FROM dba_hist_wr_control;
 \`\`\`
 
-### 2.2 Manually purge snapshots older than new retention
+If your environment requires a longer or shorter AWR window, adjust the \`retention\` parameter accordingly:
+- 7 days: 10080 minutes
+- 14 days: 20160 minutes
+- 30 days: 43200 minutes
 
-Background purge runs in MMON but can take days. Trigger immediate purge:
+### 8.2 Restart in normal mode
 
 \`\`\`sql
--- Find the snapshot range to drop
-SELECT MIN(snap_id) AS min_snap,
-       MAX(snap_id) AS max_snap
-FROM   dba_hist_snapshot
-WHERE  end_interval_time < SYSDATE - 14;
-
--- Drop the range (replace with actual values from above)
-BEGIN
-  DBMS_WORKLOAD_REPOSITORY.DROP_SNAPSHOT_RANGE(
-    low_snap_id  => &min_snap,
-    high_snap_id => &max_snap
-  );
-END;
-/
+SHUTDOWN IMMEDIATE;
+STARTUP;
 \`\`\`
 
-For very large ranges, process in batches of 1,000 snapshots to avoid long-running transactions:
+Confirm AWR starts taking snapshots:
 
 \`\`\`sql
-DECLARE
-  CURSOR c_ranges IS
-    SELECT MIN(snap_id) AS lo,
-           MAX(snap_id) AS hi
-    FROM (
-        SELECT snap_id,
-               CEIL(ROW_NUMBER() OVER (ORDER BY snap_id) / 1000) AS batch
-        FROM   dba_hist_snapshot
-        WHERE  end_interval_time < SYSDATE - 14
-    )
-    GROUP BY batch
-    ORDER BY lo;
-BEGIN
-  FOR r IN c_ranges LOOP
-    DBMS_WORKLOAD_REPOSITORY.DROP_SNAPSHOT_RANGE(
-      low_snap_id  => r.lo,
-      high_snap_id => r.hi
-    );
-    COMMIT;
-    DBMS_OUTPUT.PUT_LINE('Dropped snaps ' || r.lo || ' to ' || r.hi);
-  END LOOP;
-END;
-/
+-- Wait 5 minutes after startup, then check
+SELECT COUNT(*) FROM dba_hist_snapshot
+WHERE begin_interval_time > SYSDATE - 1/24;
+-- Should be > 0
 \`\`\`
 
-### 2.3 Verify AWR purge completed
+### 8.3 Final validation checklist
 
 \`\`\`sql
--- After purge, confirm oldest snapshot matches new retention
-SELECT MIN(begin_interval_time) AS oldest_snap,
-       COUNT(*)                  AS remaining_snaps
-FROM   dba_hist_snapshot;
--- oldest_snap should now be approximately SYSDATE - 14
-\`\`\`
+-- 1. SYSAUX occupants (compare to Phase 0 baseline)
+SELECT occupant_name, ROUND(space_usage_kbytes / 1048576, 2) AS space_gb
+FROM v\$sysaux_occupants ORDER BY space_usage_kbytes DESC;
 
-### 2.4 Shrink top AWR segments to reclaim extents
+-- 2. No invalid objects
+SELECT COUNT(*) FROM dba_objects WHERE status = 'INVALID';
 
-\`\`\`sql
--- Enable row movement and shrink (run for top 5 AWR tables by size)
-ALTER TABLE sys.wrh\$_sqlstat                  ENABLE ROW MOVEMENT;
-ALTER TABLE sys.wrh\$_sqlstat                  SHRINK SPACE CASCADE;
+-- 3. No invalid indexes in SYSAUX
+SELECT COUNT(*) FROM dba_indexes
+WHERE tablespace_name = 'SYSAUX' AND status <> 'VALID';
 
-ALTER TABLE sys.wrh\$_active_session_history   ENABLE ROW MOVEMENT;
-ALTER TABLE sys.wrh\$_active_session_history   SHRINK SPACE CASCADE;
+-- 4. AWR retention confirmed
+SELECT retention FROM dba_hist_wr_control;
 
-ALTER TABLE sys.wrh\$_sql_plan                 ENABLE ROW MOVEMENT;
-ALTER TABLE sys.wrh\$_sql_plan                 SHRINK SPACE CASCADE;
-
-ALTER TABLE sys.wrh\$_seg_stat                 ENABLE ROW MOVEMENT;
-ALTER TABLE sys.wrh\$_seg_stat                 SHRINK SPACE CASCADE;
-
-ALTER TABLE sys.wrh\$_sysstat                  ENABLE ROW MOVEMENT;
-ALTER TABLE sys.wrh\$_sysstat                  SHRINK SPACE CASCADE;
-\`\`\`
-
-**Note:** Shrink is an online operation but generates redo. Run during off-peak hours on very large tables.
-
----
-
-## Phase 3: Reduce Optimizer Statistics History
-
-### 3.1 Change retention to 14 days
-
-\`\`\`sql
-BEGIN
-  DBMS_STATS.ALTER_STATS_HISTORY_RETENTION(14);
-END;
-/
-
--- Verify
+-- 5. Optimizer stats retention confirmed
 SELECT dbms_stats.get_stats_history_retention FROM dual;
--- Expected: 14
-\`\`\`
 
-### 3.2 Purge statistics older than 14 days immediately
-
-\`\`\`sql
-BEGIN
-  DBMS_STATS.PURGE_STATS(SYSDATE - 14);
-END;
-/
-\`\`\`
-
-**Note:** \`DBMS_STATS.PURGE_STATS\` can take 10–30 minutes on a large EBS database with many tables. Run in a dedicated session:
-
-\`\`\`sql
--- Monitor progress from another session
-SELECT opname, target, sofar, totalwork,
-       ROUND(sofar / NULLIF(totalwork,0) * 100, 1) AS pct_done,
-       elapsed_seconds
-FROM   v\$session_longops
-WHERE  opname LIKE '%STATS%'
-  AND  sofar < totalwork;
-\`\`\`
-
-### 3.3 Shrink optimizer statistics tables
-
-\`\`\`sql
-ALTER TABLE sys.wri\$_optstat_tab_history     ENABLE ROW MOVEMENT;
-ALTER TABLE sys.wri\$_optstat_tab_history     SHRINK SPACE CASCADE;
-ALTER TABLE sys.wri\$_optstat_ind_history     ENABLE ROW MOVEMENT;
-ALTER TABLE sys.wri\$_optstat_ind_history     SHRINK SPACE CASCADE;
-ALTER TABLE sys.wri\$_optstat_histgrm_history ENABLE ROW MOVEMENT;
-ALTER TABLE sys.wri\$_optstat_histgrm_history SHRINK SPACE CASCADE;
-ALTER TABLE sys.wri\$_optstat_histhead_history ENABLE ROW MOVEMENT;
-ALTER TABLE sys.wri\$_optstat_histhead_history SHRINK SPACE CASCADE;
+-- 6. SYSAUX tablespace free space
+SELECT ROUND(SUM(bytes) / 1073741824, 1) AS free_gb
+FROM dba_free_space WHERE tablespace_name = 'SYSAUX';
 \`\`\`
 
 ---
 
-## Phase 4: SQL Plan Management Cleanup
+## Diagnostic Shell Script
 
-### 4.1 Disable automatic baseline capture (if not deliberately enabled)
-
-\`\`\`sql
--- Check current setting
-SELECT value FROM v\$parameter WHERE name = 'optimizer_capture_sql_plan_baselines';
-
--- Disable if set to TRUE and you did not intentionally enable it
-ALTER SYSTEM SET optimizer_capture_sql_plan_baselines = FALSE SCOPE=BOTH;
-\`\`\`
-
-### 4.2 Drop unaccepted plan baselines older than 30 days
-
-\`\`\`sql
-DECLARE
-  v_dropped PLS_INTEGER;
-BEGIN
-  -- Drop unaccepted baselines
-  v_dropped := DBMS_SPM.DROP_SQL_PLAN_BASELINE(
-    sql_handle  => NULL,
-    plan_name   => NULL,
-    fixed       => 'NO',
-    accepted    => 'NO',
-    enabled     => 'YES'
-  );
-  DBMS_OUTPUT.PUT_LINE('Dropped unaccepted baselines: ' || v_dropped);
-END;
-/
-\`\`\`
-
-### 4.3 Configure SPM evolve task retention
-
-\`\`\`sql
--- Limit STA / SPM evolve task retention to 30 days
-BEGIN
-  DBMS_AUTO_TASK_ADMIN.DISABLE(
-    client_name => 'sql tuning advisor',
-    operation   => NULL,
-    window_name => NULL
-  );
-END;
-/
--- Re-enable if needed after cleanup:
--- DBMS_AUTO_TASK_ADMIN.ENABLE('sql tuning advisor', NULL, NULL);
-\`\`\`
-
----
-
-## Phase 5: SQL Tuning Advisor Findings Purge
-
-\`\`\`sql
--- Check space used by STA tasks
-SELECT COUNT(*), SUM(DBMS_SQLTUNE.REPORT_TUNING_TASK_SIZE) AS total_bytes
-FROM   dba_advisor_tasks
-WHERE  advisor_name = 'SQL Tuning Advisor';
-
--- Drop all completed STA task findings older than 30 days
-BEGIN
-  FOR t IN (
-    SELECT task_name
-    FROM   dba_advisor_tasks
-    WHERE  advisor_name = 'SQL Tuning Advisor'
-      AND  status        = 'COMPLETED'
-      AND  created       < SYSDATE - 30
-  ) LOOP
-    DBMS_SQLTUNE.DROP_TUNING_TASK(t.task_name);
-  END LOOP;
-END;
-/
-\`\`\`
-
----
-
-## Phase 6: Emergency Datafile Addition
-
-If SYSAUX is critically full (>95%) and purge operations cannot complete fast enough:
-
-\`\`\`sql
--- Find current datafiles and their locations
-SELECT file_name, ROUND(bytes / 1073741824, 1) AS size_gb,
-       autoextensible, ROUND(maxbytes / 1073741824, 1) AS max_gb
-FROM   dba_data_files
-WHERE  tablespace_name = 'SYSAUX'
-ORDER BY file_id;
-
--- Add a new datafile (use the same path convention as existing files)
-ALTER TABLESPACE sysaux
-  ADD DATAFILE '/u01/oradata/EBSPRD/sysaux02.dbf'
-  SIZE 4G
-  AUTOEXTEND ON
-  NEXT 512M
-  MAXSIZE 20G;
-
--- Confirm addition
-SELECT file_name, ROUND(bytes / 1073741824, 1) AS size_gb
-FROM   dba_data_files
-WHERE  tablespace_name = 'SYSAUX';
-\`\`\`
-
----
-
-## Phase 7: SYSAUX Monitoring Script
-
-Save as \`/usr/local/bin/sysaux_monitor.sh\`. Schedule daily and after any maintenance window. The script tracks SYSAUX utilization, growth rate, top occupants, AWR snapshot health, and alerts on configurable thresholds.
+Save as \`sysaux_diag.sh\` and run before starting the runbook to generate a complete baseline report and all DDL scripts needed for Phases 5–7.
 
 \`\`\`bash
 #!/bin/bash
-# sysaux_monitor.sh — Oracle EBS SYSAUX Tablespace Health Monitor
-#
-# Checks: tablespace % used, growth rate (7-day), top occupants,
-#         AWR retention vs actual, AWR snapshot failures, optimizer
-#         stats retention, SPM baseline count
-#
-# Usage:  ./sysaux_monitor.sh [ORACLE_SID]
-# Cron:   0 8 * * * /usr/local/bin/sysaux_monitor.sh EBSPRD >> /var/log/sysaux_monitor.log 2>&1
+# sysaux_diag.sh -- SYSAUX diagnostic and DDL generator
+# Usage: ./sysaux_diag.sh [ORACLE_SID]
+# Generates: occupant report, WRI\$_OPTSTAT sizes, invalid indexes, shrink DDL, resize estimates
 
-ORACLE_SID="\${1:-EBSPRD}"
+ORACLE_SID="\${1:-ORCL}"
 export ORACLE_SID
-TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
-ALERT_LOG="/var/log/sysaux_monitor_alerts.log"
-FAILURES=0
-
-# Configurable thresholds
-WARN_PCT=80
-CRIT_PCT=90
-GROWTH_WARN_GB_WEEK=2      # Alert if SYSAUX grew more than 2 GB in 7 days
-AWR_RETAIN_MAX_DAYS=30     # Alert if AWR retention exceeds this
-OPTSTAT_RETAIN_MAX_DAYS=20 # Alert if optimizer stats retention exceeds this
-SPM_BASELINE_WARN=5000     # Alert if SPM baseline count exceeds this
-
-log()   { echo "[$TIMESTAMP] $*"; }
-alert() { echo "[$TIMESTAMP] ALERT: $*" | tee -a "$ALERT_LOG"; FAILURES=$((FAILURES + 1)); }
-
-log "=== SYSAUX Monitor Start (SID: \$ORACLE_SID) ==="
+TIMESTAMP=\$(date '+%Y%m%d_%H%M%S')
+OUTDIR="/tmp/sysaux_diag_\${TIMESTAMP}"
+mkdir -p "\$OUTDIR"
 
 source /home/oracle/.bash_profile 2>/dev/null || true
-export ORACLE_HOME="\${ORACLE_HOME:-/u01/app/oracle/product/19.0.0/dbhome_1}"
+export ORACLE_HOME="\${ORACLE_HOME:-/u01/app/oracle/product/11.2.0/dbhome_1}"
 export PATH="\$ORACLE_HOME/bin:\$PATH"
-SQLPLUS="\$ORACLE_HOME/bin/sqlplus -s / as sysdba"
+SP="\$ORACLE_HOME/bin/sqlplus -s / as sysdba"
 
-# -----------------------------------------------------------------------
-# CHECK 1: SYSAUX usage percentage
-# -----------------------------------------------------------------------
-log "Checking SYSAUX usage..."
+log() { echo "[\$(date '+%H:%M:%S')] \$*"; }
 
-USAGE_DATA=\$(\$SQLPLUS <<'SQLEOF'
-SET HEADING OFF FEEDBACK OFF PAGESIZE 0 TRIMSPOOL ON
-SELECT ROUND(used_mb) || '|' || ROUND(total_mb) || '|' || ROUND(pct_used, 1)
-FROM (
-  SELECT (SUM(d.bytes) - NVL(SUM(f.bytes), 0)) / 1048576 AS used_mb,
-         SUM(d.bytes) / 1048576 AS total_mb,
-         (SUM(d.bytes) - NVL(SUM(f.bytes), 0)) / SUM(d.bytes) * 100 AS pct_used
-  FROM   dba_data_files d
-  LEFT JOIN dba_free_space f ON f.tablespace_name = d.tablespace_name
-  WHERE  d.tablespace_name = 'SYSAUX'
-);
-EXIT;
-SQLEOF
-)
+log "=== SYSAUX Diagnostic for \$ORACLE_SID ==="
+log "Output directory: \$OUTDIR"
 
-USED_MB=$(echo "\$USAGE_DATA" | cut -d'|' -f1 | tr -d '[:space:]')
-TOTAL_MB=$(echo "\$USAGE_DATA" | cut -d'|' -f2 | tr -d '[:space:]')
-PCT_USED=$(echo "\$USAGE_DATA" | cut -d'|' -f3 | tr -d '[:space:]')
-
-log "SYSAUX: \${USED_MB}MB used / \${TOTAL_MB}MB total (\${PCT_USED}%)"
-
-if (( \$(echo "\$PCT_USED >= \$CRIT_PCT" | bc -l) )); then
-  alert "SYSAUX is \${PCT_USED}% full — CRITICAL (threshold: \${CRIT_PCT}%). Add datafile or purge immediately."
-elif (( \$(echo "\$PCT_USED >= \$WARN_PCT" | bc -l) )); then
-  alert "SYSAUX is \${PCT_USED}% full — WARNING (threshold: \${WARN_PCT}%). Schedule purge."
-else
-  log "SYSAUX usage \${PCT_USED}%: OK."
-fi
-
-# -----------------------------------------------------------------------
-# CHECK 2: SYSAUX growth rate (compare to 7 days ago via DBA_HIST_TBSPC_STAT)
-# -----------------------------------------------------------------------
-log "Checking 7-day SYSAUX growth rate..."
-
-GROWTH_DATA=\$(\$SQLPLUS <<'SQLEOF'
-SET HEADING OFF FEEDBACK OFF PAGESIZE 0 TRIMSPOOL ON
-SELECT ROUND((current_mb - week_ago_mb) / 1024, 2) AS growth_gb
-FROM (
-  SELECT MAX(CASE WHEN rn = 1 THEN tablespace_usedsize END) * 8 / 1024 AS current_mb,
-         MAX(CASE WHEN rn >= 7 THEN tablespace_usedsize END) * 8 / 1024 AS week_ago_mb
-  FROM (
-    SELECT s.tablespace_usedsize,
-           ROW_NUMBER() OVER (ORDER BY snap.end_interval_time DESC) AS rn
-    FROM   dba_hist_tbspc_stat   s
-    JOIN   dba_hist_snapshot     snap ON snap.snap_id = s.snap_id
-    JOIN   v\$tablespace          ts   ON ts.ts# = s.tablespace_id
-    WHERE  ts.name = 'SYSAUX'
-      AND  snap.end_interval_time > SYSDATE - 8
-  )
-);
-EXIT;
-SQLEOF
-)
-
-GROWTH_GB=$(echo "\$GROWTH_DATA" | tr -d '[:space:]')
-if [[ -n "\$GROWTH_GB" ]] && (( \$(echo "\$GROWTH_GB > \$GROWTH_WARN_GB_WEEK" | bc -l) )); then
-  alert "SYSAUX grew \${GROWTH_GB}GB in the last 7 days (threshold: \${GROWTH_WARN_GB_WEEK}GB). Investigate top occupants."
-else
-  log "SYSAUX 7-day growth: \${GROWTH_GB:-unknown}GB. OK."
-fi
-
-# -----------------------------------------------------------------------
-# CHECK 3: Top 5 SYSAUX occupants
-# -----------------------------------------------------------------------
-log "Reporting top SYSAUX occupants..."
-
-\$SQLPLUS <<'SQLEOF'
-SET HEADING ON FEEDBACK OFF LINESIZE 80 PAGESIZE 20 TRIMSPOOL ON
+# ------------------------------------------------------------------
+# Report 1: SYSAUX occupants
+# ------------------------------------------------------------------
+log "Generating occupant report..."
+\$SP > "\$OUTDIR/01_occupants.txt" <<'SQLEOF'
+SET LINES 120 PAGES 200
+COL occupant_name FORMAT A30
+COL schema_name   FORMAT A20
+COL space_gb      FORMAT 999,990.00
 SELECT occupant_name,
+       schema_name,
        ROUND(space_usage_kbytes / 1048576, 2) AS space_gb
-FROM   v\$sysaux_occupants
-WHERE  space_usage_kbytes > 0
-ORDER BY space_usage_kbytes DESC
-FETCH FIRST 5 ROWS ONLY;
-EXIT;
+FROM v\$sysaux_occupants
+WHERE space_usage_kbytes > 0
+ORDER BY space_usage_kbytes DESC;
 SQLEOF
 
-# -----------------------------------------------------------------------
-# CHECK 4: AWR retention vs configured value
-# -----------------------------------------------------------------------
-log "Checking AWR retention settings..."
+cat "\$OUTDIR/01_occupants.txt"
 
-AWR_DATA=\$(\$SQLPLUS <<'SQLEOF'
+# ------------------------------------------------------------------
+# Report 2: WRI\$_OPTSTAT table sizes
+# ------------------------------------------------------------------
+log "Generating WRI\$_OPTSTAT segment sizes..."
+\$SP > "\$OUTDIR/02_wrioptstat_sizes.txt" <<'SQLEOF'
+SET LINES 120 PAGES 200
+COL segment_name FORMAT A50
+COL size_mb      FORMAT 999,999,990
+SELECT segment_name,
+       ROUND(SUM(bytes) / 1048576, 0) AS size_mb
+FROM dba_segments
+WHERE tablespace_name = 'SYSAUX'
+  AND segment_name LIKE 'WRI\$_OPTSTAT%'
+GROUP BY segment_name
+ORDER BY size_mb DESC;
+SQLEOF
+
+cat "\$OUTDIR/02_wrioptstat_sizes.txt"
+
+# ------------------------------------------------------------------
+# Report 3: AWR snapshot count and retention
+# ------------------------------------------------------------------
+log "Generating AWR snapshot report..."
+\$SP > "\$OUTDIR/03_awr_snapshots.txt" <<'SQLEOF'
+SET LINES 120 PAGES 50
+SELECT snap_interval, retention FROM dba_hist_wr_control;
+
+SELECT COUNT(*)                          AS total_snapshots,
+       MIN(begin_interval_time)          AS oldest_snap,
+       MAX(end_interval_time)            AS newest_snap,
+       ROUND(MAX(end_interval_time) - MIN(begin_interval_time)) AS days_retained
+FROM dba_hist_snapshot;
+SQLEOF
+
+cat "\$OUTDIR/03_awr_snapshots.txt"
+
+# ------------------------------------------------------------------
+# Report 4: Invalid indexes in SYSAUX
+# ------------------------------------------------------------------
+log "Generating invalid index report..."
+\$SP > "\$OUTDIR/04_invalid_indexes.txt" <<'SQLEOF'
+SET LINES 120 PAGES 200
+COL owner       FORMAT A10
+COL index_name  FORMAT A50
+COL status      FORMAT A10
+SELECT owner, index_name, status
+FROM dba_indexes
+WHERE tablespace_name = 'SYSAUX'
+  AND status <> 'VALID'
+ORDER BY owner, index_name;
+SQLEOF
+
+cat "\$OUTDIR/04_invalid_indexes.txt"
+
+# ------------------------------------------------------------------
+# DDL Generator 1: Enable row movement for WRI\$_OPTSTAT tables
+# ------------------------------------------------------------------
+log "Generating enable row movement DDL..."
+\$SP > "\$OUTDIR/ddl_01_enable_rowmove.sql" <<'SQLEOF'
+SET HEADING OFF FEEDBACK OFF PAGESIZE 0 TRIMSPOOL ON LINESIZE 200
+SELECT 'ALTER TABLE '||owner||'.'||segment_name||' ENABLE ROW MOVEMENT;'
+FROM dba_segments
+WHERE tablespace_name = 'SYSAUX'
+  AND segment_name LIKE 'WRI\$_OPTSTAT%'
+  AND segment_type = 'TABLE'
+ORDER BY bytes DESC;
+SQLEOF
+
+# ------------------------------------------------------------------
+# DDL Generator 2: Shrink WRI\$_OPTSTAT tables
+# ------------------------------------------------------------------
+log "Generating shrink DDL..."
+\$SP > "\$OUTDIR/ddl_02_shrink.sql" <<'SQLEOF'
+SET HEADING OFF FEEDBACK OFF PAGESIZE 0 TRIMSPOOL ON LINESIZE 200
+SELECT 'ALTER TABLE '||owner||'.'||segment_name||' SHRINK SPACE CASCADE;'
+FROM dba_segments
+WHERE tablespace_name = 'SYSAUX'
+  AND segment_name LIKE 'WRI\$_OPTSTAT%'
+  AND segment_type = 'TABLE'
+ORDER BY bytes DESC;
+SQLEOF
+
+# ------------------------------------------------------------------
+# DDL Generator 3: Disable row movement after shrink
+# ------------------------------------------------------------------
+log "Generating disable row movement DDL..."
+\$SP > "\$OUTDIR/ddl_03_disable_rowmove.sql" <<'SQLEOF'
+SET HEADING OFF FEEDBACK OFF PAGESIZE 0 TRIMSPOOL ON LINESIZE 200
+SELECT 'ALTER TABLE '||owner||'.'||segment_name||' DISABLE ROW MOVEMENT;'
+FROM dba_segments
+WHERE tablespace_name = 'SYSAUX'
+  AND segment_name LIKE 'WRI\$_OPTSTAT%'
+  AND segment_type = 'TABLE'
+ORDER BY bytes DESC;
+SQLEOF
+
+# ------------------------------------------------------------------
+# DDL Generator 4: Rebuild invalid SYSAUX indexes
+# ------------------------------------------------------------------
+log "Generating index rebuild DDL..."
+\$SP > "\$OUTDIR/ddl_04_rebuild_indexes.sql" <<'SQLEOF'
+SET HEADING OFF FEEDBACK OFF PAGESIZE 0 TRIMSPOOL ON LINESIZE 200
+-- Rebuild blocking parent index FIRST
+SELECT 'ALTER INDEX SYS.I_WRI\$_OPTSTAT_IND_OBJ#_ST REBUILD ONLINE;' AS cmd
+FROM dual
+WHERE EXISTS (
+  SELECT 1 FROM dba_indexes
+  WHERE owner = 'SYS'
+    AND index_name = 'I_WRI\$_OPTSTAT_IND_OBJ#_ST'
+    AND status <> 'VALID'
+)
+UNION ALL
+-- Then all other invalid SYSAUX indexes
+SELECT 'ALTER INDEX '||owner||'.'||index_name||' REBUILD ONLINE;'
+FROM dba_indexes
+WHERE tablespace_name = 'SYSAUX'
+  AND status <> 'VALID'
+  AND NOT (owner = 'SYS' AND index_name = 'I_WRI\$_OPTSTAT_IND_OBJ#_ST')
+ORDER BY 1;
+SQLEOF
+
+# ------------------------------------------------------------------
+# DDL Generator 5: Datafile resize estimates
+# ------------------------------------------------------------------
+log "Generating datafile resize estimates..."
+\$SP > "\$OUTDIR/05_resize_estimates.txt" <<'SQLEOF'
+SET LINES 160 PAGES 100
+COL file_name    FORMAT A60
+COL current_gb   FORMAT 990.0
+COL min_safe_gb  FORMAT 990.0
+SELECT df.file_id,
+       df.file_name,
+       ROUND(df.bytes / 1073741824, 1) AS current_gb,
+       ROUND((MAX(e.block_id + e.blocks - 1) * 8192) / 1073741824 + 1, 1) AS min_safe_gb
+FROM dba_extents e
+JOIN dba_data_files df ON df.file_id = e.file_id
+WHERE df.tablespace_name = 'SYSAUX'
+GROUP BY df.file_id, df.file_name, df.bytes
+ORDER BY df.file_id;
+SQLEOF
+
+cat "\$OUTDIR/05_resize_estimates.txt"
+
+log ""
+log "=== Diagnostic complete. Files in \$OUTDIR ==="
+ls -lh "\$OUTDIR/"
+log ""
+log "Next steps:"
+log "  1. Review \$OUTDIR/01_occupants.txt — identify dominant SM/AWR or SM/OPT"
+log "  2. Review \$OUTDIR/02_wrioptstat_sizes.txt — confirm WRI\$_OPTSTAT tables are large"
+log "  3. Execute ddl_01_enable_rowmove.sql, ddl_02_shrink.sql, ddl_03_disable_rowmove.sql"
+log "  4. Execute ddl_04_rebuild_indexes.sql IN ORDER (blocking index is first)"
+log "  5. Review 05_resize_estimates.txt and run ALTER DATABASE DATAFILE ... RESIZE"
+\`\`\`
+
+Make the script executable and run it:
+
+\`\`\`bash
+chmod +x sysaux_diag.sh
+./sysaux_diag.sh ORCL
+\`\`\`
+
+---
+
+## SYSAUX Growth Monitoring Alert
+
+Set up a cron-based check that alerts when SYSAUX exceeds configurable thresholds. Add to the oracle user's crontab:
+
+\`\`\`bash
+#!/bin/bash
+# sysaux_alert.sh -- alert when SYSAUX exceeds threshold
+# Cron: */30 * * * * /usr/local/bin/sysaux_alert.sh ORCL 75 90
+
+ORACLE_SID="\${1:-ORCL}"
+WARN_PCT="\${2:-75}"
+CRIT_PCT="\${3:-90}"
+export ORACLE_SID
+
+source /home/oracle/.bash_profile 2>/dev/null || true
+export ORACLE_HOME="\${ORACLE_HOME:-/u01/app/oracle/product/11.2.0/dbhome_1}"
+export PATH="\$ORACLE_HOME/bin:\$PATH"
+
+PCT_USED=\$(\$ORACLE_HOME/bin/sqlplus -s / as sysdba <<'SQLEOF'
 SET HEADING OFF FEEDBACK OFF PAGESIZE 0 TRIMSPOOL ON
-SELECT ROUND(EXTRACT(DAY FROM retention) +
-             EXTRACT(HOUR FROM retention)/24) || '|' ||
-       ROUND(MIN(begin_interval_time) - SYSDATE + MAX(end_interval_time) - SYSDATE)
-FROM   dba_hist_wr_control, dba_hist_snapshot
-GROUP BY retention;
+SELECT ROUND((SUM(d.bytes) - NVL(SUM(f.bytes), 0)) / SUM(d.bytes) * 100, 1)
+FROM dba_data_files d
+LEFT JOIN dba_free_space f ON f.tablespace_name = d.tablespace_name
+WHERE d.tablespace_name = 'SYSAUX';
 EXIT;
 SQLEOF
 )
 
-RETAIN_DAYS=$(echo "\$AWR_DATA" | cut -d'|' -f1 | tr -d '[:space:]')
-log "AWR configured retention: \${RETAIN_DAYS} days"
+PCT_USED=\$(echo "\$PCT_USED" | tr -d '[:space:]')
 
-if [[ -n "\$RETAIN_DAYS" ]] && [[ "\$RETAIN_DAYS" -gt "\$AWR_RETAIN_MAX_DAYS" ]]; then
-  alert "AWR retention is \${RETAIN_DAYS} days (threshold: \${AWR_RETAIN_MAX_DAYS}). Reduce with DBMS_WORKLOAD_REPOSITORY.MODIFY_SNAPSHOT_SETTINGS."
+if [[ -z "\$PCT_USED" ]]; then
+  echo "[\$(date)] ERROR: Could not query SYSAUX usage for \$ORACLE_SID"
+  exit 2
 fi
 
-# -----------------------------------------------------------------------
-# CHECK 5: AWR snapshot failures in alert log
-# -----------------------------------------------------------------------
-log "Checking for AWR snapshot failure errors..."
-
-ALERT_LOG_PATH=\$(\$SQLPLUS <<'SQLEOF'
-SET HEADING OFF FEEDBACK OFF PAGESIZE 0 TRIMSPOOL ON
-SELECT value FROM v\$diag_info WHERE name = 'Diag Alert';
-EXIT;
-SQLEOF
-)
-ALERT_LOG_PATH=$(echo "\$ALERT_LOG_PATH" | tr -d '[:space:]')
-
-if [[ -f "\$ALERT_LOG_PATH/alert_\$ORACLE_SID.log" ]]; then
-  SNAP_ERRORS=$(tail -500 "\$ALERT_LOG_PATH/alert_\$ORACLE_SID.log" \
-                | grep -c 'ORA-1688\|ORA-1652\|SYSAUX.*full\|AWR.*error' || echo "0")
-  if [[ "\$SNAP_ERRORS" -gt 0 ]]; then
-    alert "\$SNAP_ERRORS AWR/SYSAUX error(s) found in alert log (ORA-1688, ORA-1652)"
-    tail -500 "\$ALERT_LOG_PATH/alert_\$ORACLE_SID.log" \
-      | grep 'ORA-1688\|ORA-1652\|SYSAUX.*full\|AWR.*error' | tail -5
-  else
-    log "No AWR snapshot errors in alert log. OK."
-  fi
-fi
-
-# -----------------------------------------------------------------------
-# CHECK 6: Optimizer statistics retention
-# -----------------------------------------------------------------------
-log "Checking optimizer statistics history retention..."
-
-OPTSTAT_RETAIN=\$(\$SQLPLUS <<'SQLEOF'
-SET HEADING OFF FEEDBACK OFF PAGESIZE 0 TRIMSPOOL ON
-SELECT dbms_stats.get_stats_history_retention FROM dual;
-EXIT;
-SQLEOF
-)
-OPTSTAT_RETAIN=$(echo "\$OPTSTAT_RETAIN" | tr -d '[:space:]')
-
-log "Optimizer statistics retention: \${OPTSTAT_RETAIN} days"
-if [[ -n "\$OPTSTAT_RETAIN" ]] && [[ "\$OPTSTAT_RETAIN" -gt "\$OPTSTAT_RETAIN_MAX_DAYS" ]]; then
-  alert "Optimizer statistics retention is \${OPTSTAT_RETAIN} days (threshold: \${OPTSTAT_RETAIN_MAX_DAYS}). Run: DBMS_STATS.ALTER_STATS_HISTORY_RETENTION(14)."
-fi
-
-# -----------------------------------------------------------------------
-# CHECK 7: SQL Plan Management baseline count
-# -----------------------------------------------------------------------
-log "Checking SQL Plan Management baseline count..."
-
-SPM_COUNT=\$(\$SQLPLUS <<'SQLEOF'
-SET HEADING OFF FEEDBACK OFF PAGESIZE 0 TRIMSPOOL ON
-SELECT COUNT(*) FROM dba_sql_plan_baselines;
-EXIT;
-SQLEOF
-)
-SPM_COUNT=$(echo "\$SPM_COUNT" | tr -d '[:space:]')
-
-log "SPM baselines: \$SPM_COUNT"
-if [[ -n "\$SPM_COUNT" ]] && [[ "\$SPM_COUNT" -gt "\$SPM_BASELINE_WARN" ]]; then
-  alert "SQL Plan Management has \$SPM_COUNT baselines (threshold: \$SPM_BASELINE_WARN). Purge unaccepted baselines."
-  \$SQLPLUS <<'SQLEOF'
-SET HEADING ON FEEDBACK OFF LINESIZE 60 PAGESIZE 10
-SELECT accepted, enabled, COUNT(*) AS cnt
-FROM   dba_sql_plan_baselines
-GROUP BY accepted, enabled
-ORDER BY 1, 2;
-EXIT;
-SQLEOF
-else
-  log "SPM baseline count: OK."
-fi
-
-# -----------------------------------------------------------------------
-# CHECK 8: SYSAUX autoextend headroom
-# -----------------------------------------------------------------------
-log "Checking SYSAUX autoextend headroom..."
-
-AE_DATA=\$(\$SQLPLUS <<'SQLEOF'
-SET HEADING OFF FEEDBACK OFF PAGESIZE 0 TRIMSPOOL ON
-SELECT ROUND(SUM(bytes) / 1073741824, 1) || '|' ||
-       ROUND(SUM(maxbytes) / 1073741824, 1)
-FROM   dba_data_files
-WHERE  tablespace_name   = 'SYSAUX'
-  AND  autoextensible    = 'YES';
-EXIT;
-SQLEOF
-)
-
-CURR_GB=$(echo "\$AE_DATA" | cut -d'|' -f1 | tr -d '[:space:]')
-MAX_GB=$(echo "\$AE_DATA" | cut -d'|' -f2 | tr -d '[:space:]')
-
-if [[ -n "\$MAX_GB" ]] && [[ -n "\$CURR_GB" ]]; then
-  HEADROOM=\$(echo "\$MAX_GB - \$CURR_GB" | bc)
-  log "SYSAUX autoextend: \${CURR_GB}GB current / \${MAX_GB}GB max (\${HEADROOM}GB headroom)"
-  if (( \$(echo "\$HEADROOM < 5" | bc -l) )); then
-    alert "SYSAUX autoextend headroom is only \${HEADROOM}GB. Increase MAXSIZE or add a datafile."
-  fi
-else
-  log "No autoextend datafiles found — SYSAUX is fixed-size. Monitor free space closely."
-fi
-
-# -----------------------------------------------------------------------
-# Summary
-# -----------------------------------------------------------------------
-log "=== SYSAUX Monitor Complete: \$FAILURES alert(s) ==="
-
-if [[ "\$FAILURES" -gt 0 ]]; then
-  echo ""
-  echo "ACTION REQUIRED: \$FAILURES SYSAUX issue(s) detected. See \$ALERT_LOG"
+# Alert threshold check
+if (( \$(echo "\$PCT_USED >= \$CRIT_PCT" | bc -l) )); then
+  echo "[\$(date)] CRITICAL: SYSAUX is \${PCT_USED}% full on \$ORACLE_SID (threshold: \${CRIT_PCT}%)"
+  echo "[\$(date)] Run sysaux_diag.sh and initiate reclamation runbook immediately."
+  exit 2
+elif (( \$(echo "\$PCT_USED >= \$WARN_PCT" | bc -l) )); then
+  echo "[\$(date)] WARNING: SYSAUX is \${PCT_USED}% full on \$ORACLE_SID (threshold: \${WARN_PCT}%)"
+  echo "[\$(date)] Check SM/AWR and SM/OPT occupants and schedule maintenance."
   exit 1
 else
-  log "All SYSAUX checks passed."
+  echo "[\$(date)] OK: SYSAUX is \${PCT_USED}% full on \$ORACLE_SID"
   exit 0
 fi
 \`\`\`
 
-### Install and schedule
+Add the SM/OPT occupant size check as an additional threshold — alert if SM/OPT exceeds 50 GB regardless of overall tablespace percentage:
 
 \`\`\`bash
-chmod +x /usr/local/bin/sysaux_monitor.sh
+SMOPT_GB=\$(\$ORACLE_HOME/bin/sqlplus -s / as sysdba <<'SQLEOF'
+SET HEADING OFF FEEDBACK OFF PAGESIZE 0 TRIMSPOOL ON
+SELECT ROUND(space_usage_kbytes / 1048576, 1)
+FROM v\$sysaux_occupants
+WHERE occupant_name IN ('SM/OPT','SM/OPTSTAT')
+  AND ROWNUM = 1;
+EXIT;
+SQLEOF
+)
+SMOPT_GB=\$(echo "\$SMOPT_GB" | tr -d '[:space:]')
 
-# Daily at 08:00 — review occupants each morning
-crontab -e
-\`\`\`
-
-\`\`\`
-0 8 * * * /usr/local/bin/sysaux_monitor.sh EBSPRD >> /var/log/sysaux_monitor.log 2>&1
-\`\`\`
-
-For immediate email alerts when SYSAUX exceeds 90%:
-
-\`\`\`
-*/30 * * * * /usr/local/bin/sysaux_monitor.sh EBSPRD 2>&1 | grep -q 'ACTION REQUIRED' && \
-  /usr/local/bin/sysaux_monitor.sh EBSPRD | mailx -s "SYSAUX Alert - $(hostname)" dba-alerts@company.com
-\`\`\`
-
----
-
-## Monthly Maintenance Checklist
-
-Run these steps on the first Monday of each month during a low-traffic window:
-
-\`\`\`
-[ ] Run sysaux_monitor.sh and review all alerts
-[ ] Check V\$SYSAUX_OCCUPANTS — any occupant growing >10% month-over-month?
-[ ] Purge AWR snapshots older than retention period (Phase 2.2)
-[ ] Purge optimizer statistics history older than 14 days (Phase 3.2)
-[ ] Drop unaccepted SPM baselines (Phase 4.2)
-[ ] Drop completed SQL Tuning Advisor tasks older than 30 days (Phase 5)
-[ ] Shrink top 5 AWR segments if reclaim > 500MB (Phase 2.4)
-[ ] Verify SYSAUX autoextend headroom > 5 GB after purge
-[ ] Record SYSAUX used_mb in capacity tracking spreadsheet
+if [[ -n "\$SMOPT_GB" ]] && (( \$(echo "\$SMOPT_GB > 50" | bc -l) )); then
+  echo "[\$(date)] WARNING: SM/OPT occupant is \${SMOPT_GB}GB on \$ORACLE_SID"
+  echo "[\$(date)] Run: EXEC DBMS_STATS.PURGE_STATS(SYSDATE-14);"
+fi
 \`\`\`
 
 ---
 
-## Troubleshooting Table
+## Troubleshooting Reference
 
-| Symptom | Root Cause | Fix |
-|---------|-----------|-----|
-| \`ORA-1688: unable to extend segment in SYSAUX\` | SYSAUX full — AWR or stats tables | Emergency datafile add (Phase 6), then purge (Phase 2–3) |
-| AWR snapshots stop being created | SYSAUX > 97% full | Add datafile immediately; reduce retention |
-| Purge runs but space not reclaimed | Segments not shrunk after purge | Run \`SHRINK SPACE CASCADE\` on top AWR tables (Phase 2.4) |
-| \`DBMS_STATS.PURGE_STATS\` hangs | Very large stats history with index rebuilds | Run during off-peak; monitor with \`v\$session_longops\` |
-| SPM baselines growing without known cause | \`optimizer_capture_sql_plan_baselines = TRUE\` | Set to FALSE; drop unaccepted baselines (Phase 4) |
-| Growth resumes immediately after purge | AWR retention not changed — only snapshot deleted | Set new retention with \`MODIFY_SNAPSHOT_SETTINGS\` (Phase 2.1) |
-| Shrink fails with \`ORA-10635\` | Table not in row-movement-enabled state | Run \`ALTER TABLE ... ENABLE ROW MOVEMENT\` first |
-| Monitor reports occupant space but \`dba_free_space\` shows free space | High-water mark not reset after purge | Run \`SHRINK SPACE\` or \`MOVE\` to reset high-water mark |`,
-};
+| Error or Symptom | Root Cause | Resolution |
+|-----------------|-----------|------------|
+| \`ORA-01502: index ... in unusable state\` during index rebuild | \`I_WRI\$_OPTSTAT_IND_OBJ#_ST\` is unusable and must be rebuilt first | \`ALTER INDEX SYS.I_WRI\$_OPTSTAT_IND_OBJ#_ST REBUILD ONLINE;\` then retry other indexes |
+| \`ORA-03297\` when resizing datafile | Segment allocated beyond target resize point | Run 7.2 move script to relocate blocking segments, then retry resize |
+| \`ORA-10635\` when running SHRINK SPACE | Row movement not enabled | \`ALTER TABLE ... ENABLE ROW MOVEMENT;\` then retry shrink |
+| \`DBMS_STATS.PURGE_STATS\` hangs for hours | Very large stats history, contention on SYS tables | Monitor with \`v\$session_longops\`; if truly stuck, kill and use targeted date-range purge in smaller batches |
+| AWR snapshots fail after re-enable | Invalid AWR objects after rebuild | Run \`@\$ORACLE_HOME/rdbms/admin/utlrp.sql\` and recheck \`dba_objects\` for invalids |
+| Space not reclaimed after purge | HWM not lowered — rows deleted but extents retained | Proceed with Phase 5 shrink or Phase 7 move and resize |
+| catnoawr.sql errors | Some AWR objects already dropped or corrupted | Review spool output; missing objects during drop are usually safe to ignore |
+| SYSAUX re-fills within weeks | AWR retention not changed before re-enable | Set retention explicitly with \`MODIFY_SNAPSHOT_SETTINGS\` before restart (Phase 8.1) |
 
-async function main() {
-  console.log('Inserting SYSAUX growth management runbook...');
+---
+
+## Post-Maintenance Checklist
+
+Complete each item after finishing Phase 8:
+
+\`\`\`
+[ ] SYSAUX usage is below 50% of allocated size
+[ ] V\$SYSAUX_OCCUPANTS — SM/AWR and SM/OPT each below 20 GB
+[ ] No invalid objects in dba_objects
+[ ] No invalid indexes in SYSAUX (dba_indexes WHERE status <> 'VALID')
+[ ] AWR taking snapshots (dba_hist_snapshot has entries within last 2 hours)
+[ ] AWR retention confirmed at target value in dba_hist_wr_control
+[ ] Optimizer stats retention confirmed at 14 days
+[ ] sysaux_alert.sh scheduled in cron with 75%/90% thresholds
+[ ] Disk space reclamation confirmed (OS-level df -h on datafile filesystem)
+[ ] Baseline SYSAUX size recorded in capacity tracking system
+\`\`\``,
+  };
+
   await db.insert(posts).values(post).onConflictDoUpdate({
     target: posts.slug,
     set: {
       title: post.title,
-      excerpt: post.excerpt,
       content: post.content,
-      category: post.category,
-      published: post.published,
-      isPremium: post.isPremium,
-      publishedAt: post.publishedAt,
-      youtubeUrl: post.youtubeUrl,
+      excerpt: post.excerpt,
+      updatedAt: new Date(),
     },
   });
-  console.log('Inserted:', JSON.stringify(post.title));
+  console.log('Inserted:', post.slug);
 }
 
 main().catch(console.error);
