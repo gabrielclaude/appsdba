@@ -35,7 +35,7 @@ export function PostContent({ content }: PostContentProps) {
       );
     } else if (line.startsWith('## ')) {
       elements.push(
-        <h2 key={key()} className="text-2xl font-bold text-[#1E0E26] mt-10 mb-4 border-b border-[#C8A84B] pb-2">
+        <h2 key={key()} className="text-2xl font-bold text-[#0D1F3C] mt-10 mb-4 border-b border-[#C8A84B] pb-2">
           {line.slice(3)}
         </h2>
       );

@@ -48,7 +48,7 @@ export default async function HomePage() {
         >
           <div>
             <span className="text-xs font-medium text-[#E8693C] uppercase tracking-wide">New</span>
-            <p className="text-sm font-semibold text-[#1E0E26] group-hover:text-[#E8693C] transition-colors mt-0.5">
+            <p className="text-sm font-semibold text-[#0D1F3C] group-hover:text-[#E8693C] transition-colors mt-0.5">
               EBS Concurrent Program Performance: Building a Data Warehouse with AWR Correlation and Python ML
             </p>
           </div>

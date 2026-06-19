@@ -36,10 +36,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <MaybeClerkProvider>
       <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
-        <body className="min-h-full flex flex-col bg-[#1E0E26]">
+        <body className="min-h-full flex flex-col bg-[#1A2B4A]">
           <Header />
           <main className="flex-1 max-w-6xl mx-auto w-full px-4 py-8">{children}</main>
-          <footer className="border-t border-[#3D1F4E] bg-[#130820] text-[#FFCB8E] text-sm text-center py-6">
+          <footer className="border-t border-[#1E3566] bg-[#0F1D38] text-[#FFCB8E] text-sm text-center py-6">
             © {new Date().getFullYear()} 21st Century Apps DBA · Oracle · EBS · WebLogic · GoldenGate · RAC
           </footer>
         </body>

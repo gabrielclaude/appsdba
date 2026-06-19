@@ -17,7 +17,7 @@ export function PostCard({ post }: PostCardProps) {
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-3">
           <Link href={`/posts/${post.slug}`} className="group flex-1">
-            <h2 className="text-xl font-semibold text-[#1E0E26] group-hover:text-[#E8693C] transition-colors leading-snug">
+            <h2 className="text-xl font-semibold text-[#0D1F3C] group-hover:text-[#E8693C] transition-colors leading-snug">
               {post.title}
             </h2>
           </Link>

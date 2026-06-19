@@ -33,7 +33,7 @@ async function AuthButtons() {
 
 export async function Header() {
   return (
-    <header className="bg-[#130820] text-white shadow-lg border-b border-[#3D1F4E]">
+    <header className="bg-[#0F1D38] text-white shadow-lg border-b border-[#1E3566]">
       <div className="max-w-6xl mx-auto px-4">
         <div className="flex items-center justify-between py-4">
           <Link href="/" className="group">
@@ -58,7 +58,7 @@ export async function Header() {
         <nav className="flex gap-1 pb-2 overflow-x-auto scrollbar-none">
           <Link
             href="/"
-            className="text-sm px-3 py-1.5 rounded text-[#FFE4A0] hover:bg-[#2D1040] hover:text-white transition-colors whitespace-nowrap"
+            className="text-sm px-3 py-1.5 rounded text-[#FFE4A0] hover:bg-[#1A3260] hover:text-white transition-colors whitespace-nowrap"
           >
             All Posts
           </Link>
@@ -66,7 +66,7 @@ export async function Header() {
             <Link
               key={key}
               href={`/category/${key}`}
-              className="text-sm px-3 py-1.5 rounded text-[#FFE4A0] hover:bg-[#2D1040] hover:text-white transition-colors whitespace-nowrap"
+              className="text-sm px-3 py-1.5 rounded text-[#FFE4A0] hover:bg-[#1A3260] hover:text-white transition-colors whitespace-nowrap"
             >
               {label}
             </Link>

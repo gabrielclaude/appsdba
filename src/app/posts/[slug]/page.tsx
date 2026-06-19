@@ -119,7 +119,7 @@ export default async function PostPage({ params }: Props) {
         />
       )}
 
-      <div className="mt-8 pt-6 border-t border-[#3D1F4E] flex items-center justify-between">
+      <div className="mt-8 pt-6 border-t border-[#1E3566] flex items-center justify-between">
         <Link href="/" className="text-sm text-[#FF8C42] hover:text-[#FFE4A0] hover:underline transition-colors">
           ← Back to all posts
         </Link>
