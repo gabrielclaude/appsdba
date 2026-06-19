@@ -9,7 +9,7 @@ const sql = neon(process.env.DATABASE_URL!);
 const db = drizzle({ client: sql });
 
 const post = {
-  title: 'Behind the Scenes of a P1 Crisis: Troubleshooting Oracle EBS Mass Allocation Errors',
+  title: 'Behind the Scenes of a Quarter End Close: Troubleshooting Oracle EBS Mass Allocation Errors',
   slug: 'ebs-gl-mass-allocation-r-amas0108-error',
   excerpt:
     "It's the end of the financial period and Oracle EBS Mass Allocation is throwing R_AMAS0108 — the period is not open — on a period you can plainly see is open. This is how enterprise support teams diagnose that contradiction using 10046 tracing and FND_LOG_MESSAGES before the month-end close window slams shut.",
@@ -18,7 +18,7 @@ const post = {
   isPremium: false,
   publishedAt: new Date('2026-06-08'),
   youtubeUrl: null,
-  content: `It's the end of the financial period, the business is scrambling to close the books, and suddenly a critical process throws an unexpected error. This is the exact scenario that played out in a recent high-priority support case involving Oracle E-Business Suite General Ledger.
+  content: `It's the end of the financial period, the business is scrambling to close the books, and suddenly a critical process throws an unexpected error. This is the exact scenario that played out during a quarter end close involving Oracle E-Business Suite General Ledger.
 
 ---
 
@@ -32,7 +32,7 @@ A major enterprise client hit a roadblock while wrapping up their financial peri
 | **Process** | Mass Allocation formula execution |
 | **Symptom** | Formula fails immediately on submission |
 | **Business impact** | Complete halt on the month-end close |
-| **Priority** | P1 — Production Critical |
+| **Timing** | Quarter End Close |
 
 With the accounting team under pressure to finalise the numbers, resolving this was not optional.
 
