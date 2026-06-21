@@ -30,6 +30,7 @@ export const categoryEnum = pgEnum('category', [
   'oracle-retail',
   'oracle-agile',
   'oracle-siebel',
+  'pharma-clinical-trials',
 ]);
 
 export const posts = pgTable('posts', {
