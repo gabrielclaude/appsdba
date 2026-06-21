@@ -109,11 +109,6 @@ export const CATEGORIES = {
     color: 'bg-blue-100 text-blue-800',
     description: 'NetSuite ERP configuration, administration, and best practices — COA design, item master setup, workflow automation, role-based security, and implementation sequencing.',
   },
-  'oracle-clinical': {
-    label: 'Oracle Clinical',
-    color: 'bg-purple-100 text-purple-800',
-    description: 'Oracle Clinical CDMS installation, sizing, DBA administration, and 21 CFR Part 11 compliance — schema management, performance tuning, patching, and clinical data operations.',
-  },
   'fusion-cloud-erp': {
     label: 'Fusion Cloud ERP',
     color: 'bg-red-100 text-red-800',
@@ -144,9 +139,46 @@ export const CATEGORIES = {
     color: 'bg-indigo-100 text-indigo-800',
     description: 'Oracle Siebel CRM — enterprise CRM implementation, Siebel Server architecture, AOM configuration, schema administration, EAI integration, workflow, and DBA operations.',
   },
+  'oracle-clinical': {
+    label: 'Oracle Clinical',
+    color: 'bg-purple-100 text-purple-800',
+    description: 'Oracle Clinical CDMS installation, sizing, DBA administration, and 21 CFR Part 11 compliance — schema management, performance tuning, patching, and clinical data operations.',
+  },
+  'pharma-clinical-trials': {
+    label: 'Pharma Clinical Trials',
+    color: 'bg-teal-100 text-teal-800',
+    description: 'Clinical trial platforms, CDMS comparison, EDC architecture, and regulatory data management across Oracle Clinical, Medidata Rave, and Veeva Vault.',
+  },
+  'sap-hana': {
+    label: 'SAP HANA',
+    color: 'bg-blue-100 text-blue-800',
+    description: 'SAP HANA in-memory database platform — installation on RHEL, sizing, administration, backup, and integration with life sciences workloads.',
+  },
 } as const;
 
 export type CategoryKey = keyof typeof CATEGORIES;
+
+// ---------------------------------------------------------------------------
+// Section groupings — Life Sciences and any future top-level sections
+// ---------------------------------------------------------------------------
+export const CATEGORY_SECTIONS: Record<string, {
+  label: string;
+  color: string;
+  description: string;
+  categories: CategoryKey[];
+}> = {
+  'life-sciences': {
+    label: 'Life Sciences',
+    color: 'bg-emerald-100 text-emerald-800',
+    description: 'Clinical data management, pharma analytics, and life sciences database platforms.',
+    categories: ['oracle-clinical', 'pharma-clinical-trials', 'sap-hana'],
+  },
+};
+
+// Set of category keys that belong to a named section (excluded from the main grid)
+export const SECTIONED_CATEGORY_KEYS = new Set<string>(
+  Object.values(CATEGORY_SECTIONS).flatMap(s => s.categories)
+);
 
 export function getCategoryLabel(key: CategoryKey): string {
   return CATEGORIES[key]?.label ?? key;

@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { CATEGORIES } from '@/lib/categories';
+import { Fragment } from 'react';
+import { CATEGORIES, CATEGORY_SECTIONS, SECTIONED_CATEGORY_KEYS } from '@/lib/categories';
 import { SearchBox } from './SearchBox';
 
 const clerkEnabled = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
@@ -55,21 +56,49 @@ export async function Header() {
           </div>
         </div>
 
-        <nav className="flex gap-1 pb-2 overflow-x-auto scrollbar-none">
+        <nav className="flex gap-1 pb-2 overflow-x-auto scrollbar-none items-center">
           <Link
             href="/"
             className="text-sm px-3 py-1.5 rounded text-[#FFE4A0] hover:bg-[#1A3260] hover:text-white transition-colors whitespace-nowrap"
           >
             All Posts
           </Link>
-          {Object.entries(CATEGORIES).map(([key, { label }]) => (
-            <Link
-              key={key}
-              href={`/category/${key}`}
-              className="text-sm px-3 py-1.5 rounded text-[#FFE4A0] hover:bg-[#1A3260] hover:text-white transition-colors whitespace-nowrap"
-            >
-              {label}
-            </Link>
+
+          {/* Regular categories (not in any section) */}
+          {Object.entries(CATEGORIES)
+            .filter(([key]) => !SECTIONED_CATEGORY_KEYS.has(key))
+            .map(([key, { label }]) => (
+              <Link
+                key={key}
+                href={`/category/${key}`}
+                className="text-sm px-3 py-1.5 rounded text-[#FFE4A0] hover:bg-[#1A3260] hover:text-white transition-colors whitespace-nowrap"
+              >
+                {label}
+              </Link>
+            ))}
+
+          {/* Section groups */}
+          {Object.entries(CATEGORY_SECTIONS).map(([sectionKey, section]) => (
+            <Fragment key={sectionKey}>
+              {/* Section label divider */}
+              <span className="shrink-0 flex items-center gap-1 mx-1 select-none">
+                <span className="h-px w-2 bg-[#FFCB8E]/30" />
+                <span className="text-[10px] font-semibold text-[#FFCB8E]/50 uppercase tracking-widest whitespace-nowrap">
+                  {section.label}
+                </span>
+                <span className="h-px w-2 bg-[#FFCB8E]/30" />
+              </span>
+              {/* Subsection links */}
+              {section.categories.map((catKey) => (
+                <Link
+                  key={catKey}
+                  href={`/category/${catKey}`}
+                  className="text-sm px-3 py-1.5 rounded text-[#FFE4A0] hover:bg-[#1A3260] hover:text-white transition-colors whitespace-nowrap border-l-2 border-[#FFCB8E]/20 pl-3"
+                >
+                  {CATEGORIES[catKey].label}
+                </Link>
+              ))}
+            </Fragment>
           ))}
         </nav>
       </div>

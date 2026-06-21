@@ -1,6 +1,6 @@
 import { getAllPosts } from '@/lib/posts';
 import { PostCard } from '@/components/PostCard';
-import { CATEGORIES } from '@/lib/categories';
+import { CATEGORIES, CATEGORY_SECTIONS, SECTIONED_CATEGORY_KEYS } from '@/lib/categories';
 import Link from 'next/link';
 
 export default async function HomePage() {
@@ -25,20 +25,54 @@ export default async function HomePage() {
 
       <section className="mb-10">
         <h2 className="text-sm font-semibold text-[#E8693C] uppercase tracking-wider mb-4">Browse by Topic</h2>
+
+        {/* Main categories — excludes section-grouped categories */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {Object.entries(CATEGORIES).map(([key, { label, color, description }]) => (
-            <Link
-              key={key}
-              href={`/category/${key}`}
-              className="group p-3 bg-[#FFF3B0] rounded-lg border border-[#C8A84B] hover:shadow-md hover:shadow-[#E8693C]/20 transition-shadow paper-texture"
-            >
-              <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded mb-2 ${color}`}>
-                {label}
-              </span>
-              <p className="text-xs text-[#4A3500] leading-tight">{description}</p>
-            </Link>
-          ))}
+          {Object.entries(CATEGORIES)
+            .filter(([key]) => !SECTIONED_CATEGORY_KEYS.has(key))
+            .map(([key, { label, color, description }]) => (
+              <Link
+                key={key}
+                href={`/category/${key}`}
+                className="group p-3 bg-[#FFF3B0] rounded-lg border border-[#C8A84B] hover:shadow-md hover:shadow-[#E8693C]/20 transition-shadow paper-texture"
+              >
+                <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded mb-2 ${color}`}>
+                  {label}
+                </span>
+                <p className="text-xs text-[#4A3500] leading-tight">{description}</p>
+              </Link>
+            ))}
         </div>
+
+        {/* Section groups (Life Sciences, etc.) */}
+        {Object.entries(CATEGORY_SECTIONS).map(([sectionKey, section]) => (
+          <div key={sectionKey} className="mt-8">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="h-px flex-1 bg-[#C8A84B]/40" />
+              <span className={`text-xs font-semibold px-3 py-0.5 rounded-full ${section.color}`}>
+                {section.label}
+              </span>
+              <span className="h-px flex-1 bg-[#C8A84B]/40" />
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              {section.categories.map((catKey) => {
+                const { label, color, description } = CATEGORIES[catKey];
+                return (
+                  <Link
+                    key={catKey}
+                    href={`/category/${catKey}`}
+                    className="group p-3 bg-[#FFF3B0] rounded-lg border border-[#C8A84B] hover:shadow-md hover:shadow-[#E8693C]/20 transition-shadow paper-texture"
+                  >
+                    <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded mb-2 ${color}`}>
+                      {label}
+                    </span>
+                    <p className="text-xs text-[#4A3500] leading-tight">{description}</p>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </section>
 
       <section className="mb-6">
