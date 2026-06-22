@@ -54,6 +54,11 @@ export const CATEGORIES = {
     color: 'bg-cyan-100 text-cyan-800',
     description: 'Oracle Exadata Database Machine — architecture, Smart Scan, storage indexes, cell offloading, IORM, patching, and administration.',
   },
+  'oracle-google-cloud': {
+    label: 'Oracle on Google Cloud',
+    color: 'bg-blue-100 text-blue-800',
+    description: 'Oracle Database@Google Cloud — deploying, connecting, and managing Oracle workloads natively on GCP infrastructure.',
+  },
   'essbase': {
     label: 'Essbase',
     color: 'bg-violet-100 text-violet-800',

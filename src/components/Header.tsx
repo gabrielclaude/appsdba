@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { Fragment } from 'react';
 import { CATEGORIES, CATEGORY_SECTIONS, SECTIONED_CATEGORY_KEYS } from '@/lib/categories';
-import { SearchBox } from './SearchBox';
 
 const clerkEnabled = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
 
@@ -45,7 +44,6 @@ export async function Header() {
           </Link>
 
           <div className="flex items-center gap-3 shrink-0">
-            <SearchBox />
             <Link
               href="/pricing"
               className="text-xs text-[#E8693C] hover:text-[#FF8C42] font-medium transition-colors hidden sm:block"

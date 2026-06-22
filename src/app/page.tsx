@@ -2,6 +2,7 @@ import { getAllPosts } from '@/lib/posts';
 import { PostCard } from '@/components/PostCard';
 import { CATEGORIES, CATEGORY_SECTIONS, SECTIONED_CATEGORY_KEYS } from '@/lib/categories';
 import Link from 'next/link';
+import { HomeSearch } from '@/components/HomeSearch';
 
 export default async function HomePage() {
   const posts = await getAllPosts();
@@ -24,6 +25,7 @@ export default async function HomePage() {
       </section>
 
       <section className="mb-10">
+        <HomeSearch />
         <h2 className="text-sm font-semibold text-[#E8693C] uppercase tracking-wider mb-4">Browse by Topic</h2>
 
         {/* Main categories — excludes section-grouped categories */}
