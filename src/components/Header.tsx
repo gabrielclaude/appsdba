@@ -62,6 +62,15 @@ export async function Header() {
             All Posts
           </Link>
 
+          <Link
+            href="/dw"
+            className="text-sm px-3 py-1.5 rounded text-[#5EEAD4] hover:bg-[#1A3260] hover:text-teal-300 transition-colors whitespace-nowrap"
+          >
+            Performance DW
+          </Link>
+
+          <span className="shrink-0 h-4 w-px bg-[#FFCB8E]/20 mx-1" />
+
           {/* Regular categories (not in any section) */}
           {Object.entries(CATEGORIES)
             .filter(([key]) => !SECTIONED_CATEGORY_KEYS.has(key))
