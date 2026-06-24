@@ -33,6 +33,7 @@ export const categoryEnum = pgEnum('category', [
   'pharma-clinical-trials',
   'sap-hana',
   'oracle-google-cloud',
+  'fusion-cloud-scm',
 ]);
 
 export const posts = pgTable('posts', {

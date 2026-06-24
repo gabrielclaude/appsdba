@@ -159,6 +159,11 @@ export const CATEGORIES = {
     color: 'bg-blue-100 text-blue-800',
     description: 'SAP HANA in-memory database platform — installation on RHEL, sizing, administration, backup, and integration with life sciences workloads.',
   },
+  'fusion-cloud-scm': {
+    label: 'Fusion Cloud SCM',
+    color: 'bg-sky-100 text-sky-800',
+    description: 'Oracle Fusion Cloud SCM Inventory R13 — cloud-native inventory management, product hub, costing, transaction processing, and supply chain execution on Oracle Cloud Infrastructure.',
+  },
 } as const;
 
 export type CategoryKey = keyof typeof CATEGORIES;
@@ -177,6 +182,12 @@ export const CATEGORY_SECTIONS: Record<string, {
     color: 'bg-emerald-100 text-emerald-800',
     description: 'Clinical data management, pharma analytics, and life sciences database platforms.',
     categories: ['oracle-clinical', 'pharma-clinical-trials', 'sap-hana'],
+  },
+  'oracle-fusion-cloud-scm': {
+    label: 'Oracle Fusion Cloud SCM Inventory R13',
+    color: 'bg-sky-100 text-sky-800',
+    description: 'Oracle Fusion Cloud SCM Inventory R13 — cloud-native inventory management on OCI.',
+    categories: ['fusion-cloud-scm'],
   },
 };
 
