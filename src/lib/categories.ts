@@ -164,6 +164,11 @@ export const CATEGORIES = {
     color: 'bg-sky-100 text-sky-800',
     description: 'Oracle Fusion Cloud SCM Inventory R13 — cloud-native inventory management, product hub, costing, transaction processing, and supply chain execution on Oracle Cloud Infrastructure.',
   },
+  'obiee': {
+    label: 'OBIEE',
+    color: 'bg-amber-100 text-amber-800',
+    description: 'Oracle Business Intelligence Enterprise Edition — RPD repository design, session variables, init blocks, security configuration, WebLogic integration, and production troubleshooting.',
+  },
 } as const;
 
 export type CategoryKey = keyof typeof CATEGORIES;

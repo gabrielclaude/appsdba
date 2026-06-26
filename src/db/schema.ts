@@ -34,6 +34,7 @@ export const categoryEnum = pgEnum('category', [
   'sap-hana',
   'oracle-google-cloud',
   'fusion-cloud-scm',
+  'obiee',
 ]);
 
 export const posts = pgTable('posts', {
