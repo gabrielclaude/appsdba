@@ -12,7 +12,7 @@ const post = {
   title: 'SSL Certificate Chain Depth: Why Your Certificates Fail in Some Systems but Not Others',
   slug: 'ssl-certificate-chain-depth-oracle-ebs',
   excerpt:
-    'A technical guide to SSL/TLS certificate chain depth: what chain depth means, how each layer of a chain is verified, why depth limits differ across Oracle Wallet, Java cacerts, OpenSSL, and browser trust stores, and why a certificate that validates perfectly in a browser fails with ORA-29024 in Oracle EBS or throws a PKIX path building failure in WebLogic. Includes concrete examples with three-tier and four-tier certificate chains and the exact verification logic each component applies.',
+    'A technical guide to SSL/TLS certificate chain depth: what chain depth means, how each layer of a chain is verified, the Not Before and Not After validity window fields and how an expired CA certificate silently breaks every leaf cert it signed, certificate fingerprints and why two certs with identical Subject names can have different fingerprints, why depth limits differ across Oracle Wallet, Java cacerts, OpenSSL, and browser trust stores, and why a certificate that validates perfectly in a browser fails with ORA-29024 in Oracle EBS or throws a PKIX path building failure in WebLogic.',
   category: 'ebs-suite' as const,
   published: true,
   isPremium: false,
@@ -71,6 +71,207 @@ When a TLS client receives a certificate chain from a server, it verifies the ch
 Each step must pass. If any certificate in the chain has expired, been revoked, or was signed by a key that does not match the next certificate in the chain, verification fails. If the root is not in the local trust store, verification fails — even if every other check passes.
 
 The **path length constraint** is a field in the Basic Constraints extension of a CA certificate that limits how many additional CA certificates can appear below it in the chain. A path length of 0 means the CA can only sign leaf certificates, not subordinate CAs. Path length of 1 means the CA can sign one level of subordinate CAs, but those subordinates can only sign leaves. This field is set by the CA when it creates the certificate and is enforced by the verifying client.
+
+---
+
+## Certificate Validity Windows: Not Before and Not After
+
+Every X.509 certificate carries two timestamp fields in its Validity extension:
+
+- **Not Before**: the earliest moment at which the certificate is considered valid. Attempting to use the certificate before this timestamp fails verification.
+- **Not After**: the moment at which the certificate expires. After this timestamp, the certificate is no longer valid regardless of any other property.
+
+These are absolute UTC timestamps, not durations. A certificate issued on 2024-01-01 with a 1-year validity has:
+
+\`\`\`
+Not Before: Jan  1 00:00:00 2024 GMT
+Not After : Jan  1 00:00:00 2025 GMT
+\`\`\`
+
+### Validity Applies to Every Certificate in the Chain
+
+This is the property most often overlooked: the Not Before / Not After check applies to **every certificate in the chain**, not just the leaf. When a TLS verifier walks the chain from leaf to root, it checks that each certificate — the leaf, every intermediate CA, and the root CA — is within its validity window at the moment of the check.
+
+A leaf certificate with a 90-day validity can be perfectly current, but if the Intermediate CA that signed it expired last week, the entire chain fails. The leaf is valid; the CA above it is not. From the verifier's perspective the chain is broken.
+
+\`\`\`
+Validity check during chain verification:
+
+  Depth 0: server.example.com
+           Not Before: 2025-04-01  Not After: 2025-07-01  ← CURRENT ✓
+           Signed by: Intermediate CA 1
+
+  Depth 1: Intermediate CA 1
+           Not Before: 2020-01-01  Not After: 2025-06-15  ← EXPIRED ✗
+           Signed by: Root CA
+
+  Depth 2: Root CA
+           Not Before: 2015-01-01  Not After: 2035-01-01  ← CURRENT ✓
+
+Result: ORA-29024 / PKIX path validation failed
+Reason: Intermediate CA 1 expired on 2025-06-15
+        The leaf cert is still valid — the CA cert above it is not
+\`\`\`
+
+This failure is particularly silent because the leaf certificate (the one most people check) shows no problem. Tools that only inspect the leaf — including many monitoring dashboards and the "lock icon" information shown in browsers — report that the certificate is valid and not expiring soon. The expiry of a CA certificate further up the chain is invisible to leaf-focused checks.
+
+### The CA Expiry Problem in Oracle Wallet
+
+Oracle Wallet does not alert when a stored trusted CA certificate expires. There is no Oracle alert, no database log entry, no AWR metric. The CA certificate expires at midnight UTC and the very next UTL_HTTP call to any endpoint signed by that CA fails with ORA-29024.
+
+The intermediate CA scenario is particularly dangerous because:
+
+1. The leaf certificate has its own expiry monitoring (typically 30–90 day alerts)
+2. CA certificates have multi-year lifetimes (1–25 years depending on CA type) and are rarely checked
+3. The CA renews its own certificate on its schedule — a new certificate is issued for the same CA Subject Name, with a new Not After date. The new certificate has a **different fingerprint** from the old one, even though the Subject Name is identical. More on this in the fingerprints section below.
+4. If your wallet contains the old CA certificate and the CA has already replaced it, re-importing "the same CA" will produce a different cert with a different fingerprint.
+
+\`\`\`bash
+# Inspect expiry dates of all certificates in the Oracle Wallet
+WALLET=/path/to/oracle/wallet
+WALLET_PWD=changeme
+
+# Export wallet contents and check each cert's dates
+openssl pkcs12 -in \${WALLET}/ewallet.p12 -nokeys -cacerts \\
+  -passin pass:\${WALLET_PWD} 2>/dev/null | \\
+awk '
+  /BEGIN CERT/ { cert="" }
+  { cert = cert "\\n" \$0 }
+  /END CERT/ {
+    cmd = "echo \\"" cert "\\" | openssl x509 -noout -subject -dates 2>/dev/null"
+    system(cmd)
+    print "---"
+  }
+'
+\`\`\`
+
+### Clock Skew and Not Before Failures
+
+Not Before failures — where a certificate is rejected as "not yet valid" — are less common but occur in two scenarios:
+
+**Newly issued certificates**: A certificate issued moments ago may have a Not Before in the immediate past or at the exact time of issuance. If the verifying system's clock is ahead of the CA's clock by even a few minutes, the certificate appears to be "not yet valid." This affects automated certificate renewal pipelines that immediately deploy freshly issued certs.
+
+**Cross-signed certificates**: Cross-signed certificates used for backward compatibility (as in the Let's Encrypt / DST Root CA X3 example) sometimes have Not Before dates that predate the system's expected trust anchor creation date. Strict verifiers may reject these.
+
+Check the server's clock sync status if Not Before failures appear:
+
+\`\`\`bash
+# Verify NTP sync on the database server
+timedatectl status | grep -i "synchronized\|ntp"
+
+# Compare server time against a reference
+date -u
+# Should match current UTC time within a few seconds
+\`\`\`
+
+---
+
+## Certificate Fingerprints
+
+A certificate fingerprint is a cryptographic hash of the certificate's complete DER-encoded binary content. It uniquely identifies a specific certificate — not the entity the certificate represents, but the exact bytes of that specific certificate file.
+
+### SHA-1 vs SHA-256 Fingerprints
+
+Two fingerprint algorithms are in common use:
+
+**SHA-1 fingerprint** (40 hex characters): The legacy format, still shown by many tools as the default. SHA-1 is cryptographically broken for signature purposes but remains acceptable for fingerprint identification since it is used as a checksum, not a signature.
+
+**SHA-256 fingerprint** (64 hex characters): The current standard. Use SHA-256 when pinning, auditing, or comparing certificates in security-sensitive contexts.
+
+\`\`\`bash
+# Get the SHA-256 fingerprint of a certificate
+openssl x509 -in /tmp/intermediate_ca.pem -noout -fingerprint -sha256
+# Output: SHA256 Fingerprint=4A:7B:...
+
+# Get both SHA-1 and SHA-256 fingerprints
+openssl x509 -in /tmp/intermediate_ca.pem -noout \\
+  -fingerprint -sha1 \\
+  -fingerprint -sha256
+
+# Get fingerprint of a certificate currently served by a remote host
+echo | openssl s_client -connect payment-gateway.example.com:443 2>/dev/null | \\
+  openssl x509 -noout -fingerprint -sha256
+\`\`\`
+
+### Why Two Certificates Can Have the Same Subject but Different Fingerprints
+
+Subject Name (the CN, O, and other fields that identify the CA) and fingerprint are completely independent. A CA that renews its own certificate issues a new certificate with:
+- The **same Subject Name** (same CN, O, OU — it is still the same CA)
+- A new key pair (or the same key pair, depending on CA policy)
+- New Not Before and Not After dates
+- A **different fingerprint** — because the bytes of the certificate are different
+
+This creates an important operational trap: if you search a trust store for "DigiCert Global Root CA" and find an entry with that name, you may be looking at the 2006 certificate (expiring 2031) or the 2022 certificate (expiring 2038). They have the same Subject Name. They have different fingerprints. They are different certificates. Importing "DigiCert Global Root CA" again does not replace the existing one — it adds a second entry with a different fingerprint.
+
+\`\`\`bash
+# Example: two Root CA certificates with the same Subject, different fingerprints
+openssl x509 -in /tmp/root_ca_old.pem -noout -subject -fingerprint -sha256 -dates
+# subject=CN=Enterprise Root CA, O=Example Corp, C=US
+# SHA256 Fingerprint=AA:BB:CC:...
+# Not After: Jan 1 00:00:00 2026 GMT  ← expiring
+
+openssl x509 -in /tmp/root_ca_new.pem -noout -subject -fingerprint -sha256 -dates
+# subject=CN=Enterprise Root CA, O=Example Corp, C=US  ← same Subject
+# SHA256 Fingerprint=DD:EE:FF:...                       ← different fingerprint
+# Not After: Jan 1 00:00:00 2036 GMT  ← new 10-year cert
+\`\`\`
+
+When updating a trust store to replace an expiring CA certificate, always:
+1. Download the new certificate from the CA's official source
+2. Verify its fingerprint matches the CA's published fingerprint
+3. Import the new certificate under a distinct alias
+4. Remove the old certificate by its fingerprint (not by Subject Name alone)
+
+\`\`\`bash
+# Oracle Wallet: distinguish two same-named CAs by fingerprint
+orapki wallet display -wallet \${WALLET} -complete | \\
+  grep -A10 "Enterprise Root CA"
+# The -complete flag shows fingerprints alongside Subject/Issuer/validity
+
+# Remove the expired one by its exact DN (must match exactly what orapki shows)
+orapki wallet remove -wallet \${WALLET} \\
+  -trusted_cert_dn "CN=Enterprise Root CA, O=Example Corp, C=US" \\
+  -pwd \${WALLET_PWD}
+# Note: if both old and new have identical DNs, orapki removes by DN match
+# Import new first, verify both exist, then remove by comparing fingerprints in the display
+\`\`\`
+
+### Certificate Pinning and Fingerprints
+
+Some applications implement **certificate pinning**: they hard-code the expected fingerprint of a specific certificate (usually a leaf or intermediate) and reject TLS connections where the presented certificate's fingerprint does not match the pinned value — regardless of whether the chain is otherwise valid.
+
+Pinning is common in mobile applications and some high-security APIs. In an Oracle EBS context, it can appear in custom PL/SQL packages that perform additional fingerprint validation beyond what UTL_HTTP does natively, or in middleware (MuleSoft, SOA Suite) that has been configured to pin to a specific certificate.
+
+When a server rotates its certificate for any reason — renewal, CA change, or key rotation — a pinned fingerprint breaks the connection even though the new certificate has a valid chain. The fix is to update the pinned fingerprint to match the new certificate, not to modify the chain.
+
+\`\`\`bash
+# Get the current fingerprint of the server's leaf certificate
+# (use this to update a pinned value after a cert rotation)
+echo | openssl s_client -connect api.gateway.example.com:443 2>/dev/null | \\
+  openssl x509 -noout -fingerprint -sha256
+# SHA256 Fingerprint=AB:CD:EF:...  ← this is the value to pin/update
+\`\`\`
+
+### Using Fingerprints to Verify Downloaded CA Certificates
+
+Before importing any CA certificate into a trust store, verify its fingerprint against the CA's official published fingerprint. Public CAs publish their root and intermediate CA fingerprints on their websites and in their CA/Browser Forum disclosures.
+
+\`\`\`bash
+# Verify a downloaded intermediate CA cert before importing to Oracle Wallet
+CERT=/tmp/enterprise_intermediate_ca.pem
+EXPECTED_FP="4A:7B:C2:..." # from the CA's official documentation
+
+ACTUAL_FP=\$(openssl x509 -in \${CERT} -noout -fingerprint -sha256 | cut -d= -f2)
+
+if [ "\${ACTUAL_FP}" = "\${EXPECTED_FP}" ]; then
+  echo "Fingerprint verified — safe to import"
+else
+  echo "FINGERPRINT MISMATCH — do not import"
+  echo "Expected: \${EXPECTED_FP}"
+  echo "Got:      \${ACTUAL_FP}"
+  exit 1
+fi
+\`\`\`
 
 ---
 
