@@ -7,13 +7,23 @@ const clerkEnabled = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
 async function AuthButtons() {
   if (!clerkEnabled) return null;
 
-  const { auth } = await import('@clerk/nextjs/server');
+  const { auth, currentUser } = await import('@clerk/nextjs/server');
   const { UserButton, SignInButton } = await import('@clerk/nextjs');
   const { userId } = await auth();
 
   if (userId) {
+    const user = await currentUser();
+    const isAdmin = user?.publicMetadata?.role === 'admin';
     return (
       <>
+        {isAdmin && (
+          <Link
+            href="/admin"
+            className="text-xs px-2.5 py-1 rounded bg-orange-500/20 text-orange-300 hover:bg-orange-500/40 hover:text-orange-200 font-medium transition-colors hidden sm:block"
+          >
+            Admin
+          </Link>
+        )}
         <Link href="/account" className="text-xs text-gray-300 hover:text-white transition-colors hidden sm:block">
           Account
         </Link>

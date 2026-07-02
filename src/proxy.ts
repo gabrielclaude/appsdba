@@ -11,18 +11,12 @@ export async function proxy(request: NextRequest) {
   const isProtectedRoute = createRouteMatcher(['/account(.*)']);
 
   return clerkMiddleware(async (auth, req) => {
-    const { userId, sessionClaims } = await auth();
+    const { userId } = await auth();
 
-    if (isAdminRoute(req)) {
-      if (!userId) {
-        const url = new URL('/sign-in', req.url);
-        url.searchParams.set('redirect_url', req.url);
-        return NextResponse.redirect(url);
-      }
-      const role = (sessionClaims?.metadata as { role?: string } | undefined)?.role;
-      if (role !== 'admin') {
-        return NextResponse.redirect(new URL('/', req.url));
-      }
+    if (isAdminRoute(req) && !userId) {
+      const url = new URL('/sign-in', req.url);
+      url.searchParams.set('redirect_url', req.url);
+      return NextResponse.redirect(url);
     }
 
     if (isProtectedRoute(req) && !userId) {

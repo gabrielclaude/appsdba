@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { auth } from '@clerk/nextjs/server';
+import { auth, currentUser } from '@clerk/nextjs/server';
 
 const navItems = [
   { href: '/admin', label: 'Overview' },
@@ -13,10 +13,35 @@ const navItems = [
 ];
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const { userId, sessionClaims } = await auth();
+  const { userId } = await auth();
   if (!userId) redirect('/sign-in');
-  const role = (sessionClaims?.metadata as { role?: string } | undefined)?.role;
-  if (role !== 'admin') redirect('/');
+
+  // currentUser() always returns latest publicMetadata, even if session token is stale
+  const user = await currentUser();
+  const role = user?.publicMetadata?.role as string | undefined;
+
+  if (role !== 'admin') {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center text-center px-4">
+        <div className="bg-white border border-gray-200 rounded-xl p-8 max-w-md">
+          <p className="text-4xl mb-4">🔒</p>
+          <h1 className="text-xl font-bold text-gray-900 mb-2">Admin access required</h1>
+          <p className="text-sm text-gray-500 mb-4">
+            Your account has been granted admin access but your current session needs to refresh.
+          </p>
+          <p className="text-sm text-gray-500 mb-6">
+            Please sign out and sign back in to activate your admin role.
+          </p>
+          <Link
+            href="/sign-in"
+            className="inline-block bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-lg text-sm font-medium"
+          >
+            Sign out &amp; sign back in
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex gap-6 min-h-[calc(100vh-200px)]">
