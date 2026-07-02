@@ -5,6 +5,7 @@ import { emailContacts } from '@/db/schema';
 import { getAllContacts, getReferralCounts } from '@/lib/email-marketing';
 import { auth } from '@clerk/nextjs/server';
 import { eq } from 'drizzle-orm';
+import { ImportForm } from './ImportForm';
 
 async function addContact(formData: FormData) {
   'use server';
@@ -72,6 +73,9 @@ export default async function ContactsPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-white">Email Contacts</h1>
+
+      {/* Spreadsheet import */}
+      <ImportForm />
 
       {/* Add Contact form */}
       <div className="bg-white border border-gray-200 rounded-xl p-6">
