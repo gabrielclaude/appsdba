@@ -1,4 +1,4 @@
-import { pgTable, serial, text, varchar, timestamp, boolean, pgEnum } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, varchar, timestamp, boolean, pgEnum, integer } from 'drizzle-orm/pg-core';
 
 export const categoryEnum = pgEnum('category', [
   'oracle-database',
@@ -84,3 +84,17 @@ export const users = pgTable('users', {
 });
 
 export type User = typeof users.$inferSelect;
+
+export const marketingExpenses = pgTable('marketing_expenses', {
+  id: serial('id').primaryKey(),
+  description: varchar('description', { length: 255 }).notNull(),
+  amount: integer('amount').notNull(), // stored in cents
+  category: varchar('category', { length: 100 }).notNull().default('other'),
+  expenseDate: timestamp('expense_date').notNull(),
+  notes: text('notes'),
+  createdBy: varchar('created_by', { length: 255 }).notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+export type MarketingExpense = typeof marketingExpenses.$inferSelect;
+export type NewMarketingExpense = typeof marketingExpenses.$inferInsert;

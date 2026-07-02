@@ -1,6 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
-// Clerk is only activated when keys are configured
 const clerkEnabled = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
 
 export async function proxy(request: NextRequest) {
@@ -8,21 +7,32 @@ export async function proxy(request: NextRequest) {
 
   const { clerkMiddleware, createRouteMatcher } = await import('@clerk/nextjs/server');
 
-  const isPublicRoute = createRouteMatcher([
-    '/',
-    '/posts/(.*)',
-    '/category/(.*)',
-    '/pricing',
-    '/sign-in(.*)',
-    '/sign-up(.*)',
-    '/api/webhooks/(.*)',
-  ]);
+  const isAdminRoute = createRouteMatcher(['/admin(.*)']);
+  const isProtectedRoute = createRouteMatcher(['/account(.*)']);
 
-  return clerkMiddleware((auth, req) => {
-    void auth; void req; void isPublicRoute;
+  return clerkMiddleware(async (auth, req) => {
+    const { userId, sessionClaims } = await auth();
+
+    if (isAdminRoute(req)) {
+      if (!userId) {
+        const url = new URL('/sign-in', req.url);
+        url.searchParams.set('redirect_url', req.url);
+        return NextResponse.redirect(url);
+      }
+      const role = (sessionClaims?.metadata as { role?: string } | undefined)?.role;
+      if (role !== 'admin') {
+        return NextResponse.redirect(new URL('/', req.url));
+      }
+    }
+
+    if (isProtectedRoute(req) && !userId) {
+      const url = new URL('/sign-in', req.url);
+      url.searchParams.set('redirect_url', req.url);
+      return NextResponse.redirect(url);
+    }
   })(request, {} as any);
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.svg$).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
 };
