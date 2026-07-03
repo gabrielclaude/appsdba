@@ -140,44 +140,46 @@ export function ImportForm() {
         </button>
       </form>
 
-      {/* Error */}
+      {/* Error modal */}
       {error && (
-        <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-          <p className="mb-3">{error}</p>
-          <button
-            type="button"
-            onClick={() => setError(null)}
-            className="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded transition-colors"
-          >
-            OK
-          </button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
+          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6">
+            <h3 className="text-base font-semibold text-red-700 mb-2">Import Error</h3>
+            <p className="text-sm text-gray-700 whitespace-pre-wrap break-words mb-6">{error}</p>
+            <button
+              type="button"
+              onClick={() => setError(null)}
+              className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              OK
+            </button>
+          </div>
         </div>
       )}
 
-      {/* Results */}
+      {/* Result modal */}
       {result && (
-        <div className={`mt-4 p-4 rounded-lg border space-y-2 ${result.errors.length > 0 ? 'bg-yellow-50 border-yellow-200' : 'bg-green-50 border-green-200'}`}>
-          <p className={`text-sm font-semibold ${result.errors.length > 0 ? 'text-yellow-800' : 'text-green-800'}`}>
-            Import complete
-          </p>
-          <div className="flex gap-4 text-sm">
-            <span className="text-green-700"><span className="font-bold">{result.imported}</span> imported</span>
-            <span className="text-gray-500"><span className="font-bold">{result.skipped}</span> skipped (duplicates)</span>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
+          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 max-h-[80vh] flex flex-col">
+            <h3 className={`text-base font-semibold mb-3 ${result.errors.length > 0 ? 'text-yellow-700' : 'text-green-700'}`}>
+              Import complete
+            </h3>
+            <div className="flex gap-6 text-sm mb-4">
+              <span className="text-green-700"><span className="font-bold">{result.imported}</span> imported</span>
+              <span className="text-gray-500"><span className="font-bold">{result.skipped}</span> skipped (duplicates)</span>
+              {result.errors.length > 0 && (
+                <span className="text-red-600"><span className="font-bold">{result.errors.length}</span> row errors</span>
+              )}
+            </div>
             {result.errors.length > 0 && (
-              <span className="text-red-600"><span className="font-bold">{result.errors.length}</span> errors</span>
+              <ul className="text-xs text-red-600 space-y-1 overflow-y-auto flex-1 border border-red-100 rounded-lg p-3 bg-red-50 mb-4">
+                {result.errors.map((e, i) => <li key={i}>{e}</li>)}
+              </ul>
             )}
-          </div>
-          {result.errors.length > 0 && (
-            <ul className="text-xs text-red-600 space-y-0.5 mt-2">
-              {result.errors.slice(0, 20).map((e, i) => <li key={i}>{e}</li>)}
-              {result.errors.length > 20 && <li>…and {result.errors.length - 20} more</li>}
-            </ul>
-          )}
-          <div className="flex gap-2 pt-1">
             <button
               type="button"
               onClick={() => { setResult(null); window.location.reload(); }}
-              className="px-4 py-1.5 bg-gray-600 hover:bg-gray-700 text-white text-xs font-medium rounded transition-colors"
+              className="mt-auto px-6 py-2 bg-gray-700 hover:bg-gray-800 text-white text-sm font-medium rounded-lg transition-colors self-start"
             >
               OK — refresh contacts
             </button>
