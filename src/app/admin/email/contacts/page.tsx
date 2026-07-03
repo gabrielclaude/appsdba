@@ -7,7 +7,7 @@ import { auth } from '@clerk/nextjs/server';
 import { eq } from 'drizzle-orm';
 import { ImportForm } from './ImportForm';
 import { CompanyListView } from './CompanyListView';
-import { StatusSelect } from './StatusSelect';
+import { ContactsTable } from './ContactsTable';
 import Link from 'next/link';
 
 async function addContact(formData: FormData) {
@@ -60,15 +60,6 @@ async function updateContactStatus(formData: FormData) {
   revalidatePath('/admin/email/contacts');
 }
 
-function statusBadge(status: string) {
-  const colors: Record<string, string> = {
-    subscribed: 'bg-green-100 text-green-700',
-    unsubscribed: 'bg-red-100 text-red-700',
-    bounced: 'bg-yellow-100 text-yellow-700',
-    complained: 'bg-purple-100 text-purple-700',
-  };
-  return colors[status] ?? 'bg-gray-100 text-gray-600';
-}
 
 export default async function ContactsPage({
   searchParams,
@@ -183,64 +174,12 @@ export default async function ContactsPage({
             {contacts.length === 0 ? (
               <p className="text-sm text-gray-400">No contacts yet.</p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-100">
-                      <th className="text-left py-2 text-gray-500">Name</th>
-                      <th className="text-left py-2 text-gray-500">Email</th>
-                      <th className="text-left py-2 text-gray-500">Status</th>
-                      <th className="text-right py-2 text-gray-500">Emails Sent</th>
-                      <th className="text-right py-2 text-gray-500">Referrals</th>
-                      <th className="text-left py-2 text-gray-500">Referral Code</th>
-                      <th className="text-left py-2 text-gray-500">Tags</th>
-                      <th className="text-left py-2 text-gray-500">Added</th>
-                      <th className="text-left py-2 text-gray-500">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {contacts.map((contact) => (
-                      <tr key={contact.id} className="border-b border-gray-50">
-                        <td className="py-2 font-medium text-gray-800">
-                          {contact.firstName} {contact.lastName}
-                        </td>
-                        <td className="py-2 text-gray-600">{contact.email}</td>
-                        <td className="py-2">
-                          <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${statusBadge(contact.status)}`}>
-                            {contact.status}
-                          </span>
-                        </td>
-                        <td className="py-2 text-right text-gray-600">{contact.emailsSent}</td>
-                        <td className="py-2 text-right text-gray-600">{referralCounts[contact.id] ?? 0}</td>
-                        <td className="py-2">
-                          <span className="font-mono text-xs text-gray-500">{contact.referralCode ?? '—'}</span>
-                        </td>
-                        <td className="py-2 text-gray-500 text-xs">{contact.tags ?? '—'}</td>
-                        <td className="py-2 text-gray-400 text-xs">
-                          {new Date(contact.createdAt).toLocaleDateString()}
-                        </td>
-                        <td className="py-2">
-                          <div className="flex items-center gap-2">
-                            <StatusSelect
-                              id={contact.id}
-                              status={contact.status}
-                              updateAction={updateContactStatus}
-                            />
-                            <form action={deleteContact.bind(null, contact.id)}>
-                              <button
-                                type="submit"
-                                className="text-xs text-gray-400 hover:text-red-500 transition-colors"
-                              >
-                                Delete
-                              </button>
-                            </form>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <ContactsTable
+                contacts={contacts}
+                referralCounts={referralCounts}
+                updateContactStatus={updateContactStatus}
+                deleteContact={deleteContact}
+              />
             )}
           </div>
         </>
