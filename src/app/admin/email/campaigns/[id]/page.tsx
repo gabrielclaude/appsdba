@@ -4,14 +4,22 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { db } from '@/db';
 import { emailContacts, emailCampaigns, emailSends, emailEvents } from '@/db/schema';
-import { getCampaignById, getCampaignSends, getContactStats } from '@/lib/email-marketing';
+import { getCampaignById, getCampaignSends, getAllContacts } from '@/lib/email-marketing';
 import { auth } from '@clerk/nextjs/server';
-import { eq, and, count, sql } from 'drizzle-orm';
+import { eq, count, inArray } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
+import { CampaignContactSelector } from './CampaignContactSelector';
 
-async function sendCampaign(campaignId: number) {
+async function sendCampaign(campaignId: number, formData: FormData) {
   'use server';
   const { userId } = await auth();
   if (!userId) throw new Error('Unauthorized');
+
+  const contactIds = (formData.getAll('contactId') as string[])
+    .map((id) => parseInt(id))
+    .filter((id) => !isNaN(id));
+
+  if (contactIds.length === 0) return;
 
   const [campaign] = await db
     .select()
@@ -21,41 +29,47 @@ async function sendCampaign(campaignId: number) {
 
   if (!campaign || campaign.status !== 'draft') return;
 
-  const subscribedContacts = await db
+  const selectedContacts = await db
     .select()
     .from(emailContacts)
-    .where(eq(emailContacts.status, 'subscribed'));
+    .where(inArray(emailContacts.id, contactIds));
 
-  if (subscribedContacts.length === 0) return;
+  if (selectedContacts.length === 0) return;
 
   const now = new Date();
-  const sends = subscribedContacts.map((contact) => ({
-    campaignId,
-    contactId: contact.id,
-    status: 'sent' as const,
-    sentAt: now,
-  }));
 
-  await db.insert(emailSends).values(sends);
+  await db.insert(emailSends).values(
+    selectedContacts.map((c) => ({
+      campaignId,
+      contactId: c.id,
+      status: 'sent' as const,
+      sentAt: now,
+    })),
+  );
 
-  // Increment emailsSent on each contact
-  for (const contact of subscribedContacts) {
+  for (const contact of selectedContacts) {
     await db
       .update(emailContacts)
       .set({ emailsSent: sql`${emailContacts.emailsSent} + 1`, updatedAt: now })
       .where(eq(emailContacts.id, contact.id));
   }
 
-  // Update campaign status
   await db
     .update(emailCampaigns)
-    .set({
-      status: 'sent',
-      sentAt: now,
-      totalSent: subscribedContacts.length,
-      updatedAt: now,
-    })
+    .set({ status: 'sent', sentAt: now, totalSent: selectedContacts.length, updatedAt: now })
     .where(eq(emailCampaigns.id, campaignId));
+
+  // Deliver via Resend if configured
+  if (process.env.RESEND_API_KEY) {
+    const { sendEmail } = await import('@/lib/email-send');
+    for (const contact of selectedContacts) {
+      try {
+        await sendEmail({ to: contact.email, subject: campaign.subject, html: campaign.bodyHtml });
+      } catch (err) {
+        console.error(`Email delivery failed for ${contact.email}:`, err);
+      }
+    }
+  }
 
   revalidatePath(`/admin/email/campaigns/${campaignId}`);
   revalidatePath('/admin/email/campaigns');
@@ -85,10 +99,10 @@ export default async function CampaignDetailPage({
   const { id } = await params;
   const campaignId = parseInt(id);
 
-  const [campaign, sends, contactStats] = await Promise.all([
+  const [campaign, sends, contacts] = await Promise.all([
     getCampaignById(campaignId),
     getCampaignSends(campaignId, 200),
-    getContactStats(),
+    getAllContacts(500),
   ]);
 
   if (!campaign) {
@@ -139,9 +153,7 @@ export default async function CampaignDetailPage({
             <Link href="/admin/email/campaigns" className="text-sm text-gray-400 hover:text-gray-600">
               ← Campaigns
             </Link>
-            <span
-              className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${statusBadge(campaign.status)}`}
-            >
+            <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${statusBadge(campaign.status)}`}>
               {campaign.status}
             </span>
           </div>
@@ -179,28 +191,27 @@ export default async function CampaignDetailPage({
         </div>
       </div>
 
-      {/* Send Campaign section */}
+      {/* Send section (draft only) */}
       {campaign.status === 'draft' && (
         <div className="bg-white border border-orange-200 rounded-xl p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-2">Send Campaign</h2>
-          <p className="text-sm text-gray-600 mb-4">
-            This will send to all{' '}
-            <span className="font-semibold text-gray-900">{contactStats.subscribed.toLocaleString()}</span>{' '}
-            subscribed contacts.
-            {!process.env.RESEND_API_KEY && (
-              <span className="text-yellow-600 ml-2">
-                (RESEND_API_KEY not set — records will be marked as sent without delivery)
-              </span>
-            )}
-          </p>
-          <form action={sendCampaignBound}>
-            <button
-              type="submit"
-              className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors"
-            >
-              Send to All Subscribed Contacts
-            </button>
-          </form>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Send Campaign</h2>
+              <p className="text-sm text-gray-500 mt-0.5">
+                Select recipients, then send — or send a test email first.
+                {!process.env.RESEND_API_KEY && (
+                  <span className="text-yellow-600 ml-2">
+                    (RESEND_API_KEY not set — records will be marked sent without delivery)
+                  </span>
+                )}
+              </p>
+            </div>
+          </div>
+          <CampaignContactSelector
+            contacts={contacts}
+            campaignId={campaignId}
+            sendAction={sendCampaignBound}
+          />
         </div>
       )}
 
@@ -237,12 +248,8 @@ export default async function CampaignDetailPage({
                     <td className="py-2 text-gray-400 text-xs">
                       {send.sentAt ? new Date(send.sentAt).toLocaleString() : '—'}
                     </td>
-                    <td className="py-2 text-right text-gray-700">
-                      {eventCounts[send.id]?.opens ?? 0}
-                    </td>
-                    <td className="py-2 text-right text-gray-700">
-                      {eventCounts[send.id]?.clicks ?? 0}
-                    </td>
+                    <td className="py-2 text-right text-gray-700">{eventCounts[send.id]?.opens ?? 0}</td>
+                    <td className="py-2 text-right text-gray-700">{eventCounts[send.id]?.clicks ?? 0}</td>
                   </tr>
                 ))}
               </tbody>
