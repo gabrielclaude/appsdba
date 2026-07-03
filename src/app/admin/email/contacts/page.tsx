@@ -7,6 +7,7 @@ import { auth } from '@clerk/nextjs/server';
 import { eq } from 'drizzle-orm';
 import { ImportForm } from './ImportForm';
 import { CompanyListView } from './CompanyListView';
+import { StatusSelect } from './StatusSelect';
 import Link from 'next/link';
 
 async function addContact(formData: FormData) {
@@ -220,23 +221,11 @@ export default async function ContactsPage({
                         </td>
                         <td className="py-2">
                           <div className="flex items-center gap-2">
-                            <form action={updateContactStatus}>
-                              <input type="hidden" name="id" value={contact.id} />
-                              <select
-                                name="status"
-                                defaultValue={contact.status}
-                                onChange={(e) => {
-                                  const form = e.currentTarget.closest('form') as HTMLFormElement;
-                                  form?.requestSubmit();
-                                }}
-                                className="text-xs border border-gray-200 rounded px-1 py-0.5 text-gray-600 focus:outline-none focus:ring-1 focus:ring-orange-400"
-                              >
-                                <option value="subscribed">subscribed</option>
-                                <option value="unsubscribed">unsubscribed</option>
-                                <option value="bounced">bounced</option>
-                                <option value="complained">complained</option>
-                              </select>
-                            </form>
+                            <StatusSelect
+                              id={contact.id}
+                              status={contact.status}
+                              updateAction={updateContactStatus}
+                            />
                             <form action={deleteContact.bind(null, contact.id)}>
                               <button
                                 type="submit"
