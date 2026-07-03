@@ -61,9 +61,9 @@ export function ImportForm() {
         <h2 className="text-lg font-semibold text-gray-900">Import from Spreadsheet</h2>
         <a
           href={`data:text/csv;charset=utf-8,${encodeURIComponent(
-            'Name,Role,POC,POC Roles,Email,Phone\n' +
-            '"Cambria USA","Armitage, Brad","Oracle EBS Database Administrator","Primary DBA Contact; Archive Point of Contact",brad.armitage@cambriausa.com,9528735184\n' +
-            '"Alorica","Daza, Jayarr","Senior Database Administrator","Primary DBA Contact; Technical Contact - Primary",jayarr.daza@alorica.com,+639178948698'
+            'Company Name,Last name , first name,Role,Notes,email,phone\n' +
+            '"Cambria USA","Armitage, Brad","Oracle EBS Database Administrator","Attended Oracle OpenWorld 2024",brad.armitage@cambriausa.com,9528735184\n' +
+            '"Alorica","Daza, Jayarr","Senior Database Administrator","Primary DBA Contact",jayarr.daza@alorica.com,+639178948698'
           )}`}
           download="contacts_template.csv"
           className="text-xs text-orange-600 hover:text-orange-700"
@@ -74,13 +74,13 @@ export function ImportForm() {
 
       <p className="text-xs text-gray-500 mb-4">
         Accepts <span className="font-medium">.csv</span>, <span className="font-medium">.xlsx</span>, or <span className="font-medium">.xls</span>.
-        Required column: <span className="font-mono">Email</span>.
+        Required column: <span className="font-mono">email</span>. Duplicate emails are skipped.
       </p>
       <div className="mb-4 overflow-x-auto">
         <table className="text-xs text-gray-500 border-collapse w-full">
           <thead>
             <tr className="bg-gray-50">
-              {['Name (Company)', 'Role (Last, First)', 'POC (Job Title)', 'POC Roles (tags)', 'Email *', 'Phone'].map(h => (
+              {['Company Name', 'Last name , first name', 'Role', 'Notes', 'email *', 'phone'].map(h => (
                 <th key={h} className="border border-gray-200 px-2 py-1 font-medium text-left whitespace-nowrap">{h}</th>
               ))}
             </tr>
@@ -90,14 +90,14 @@ export function ImportForm() {
               <td className="border border-gray-200 px-2 py-1 text-gray-400">Cambria USA</td>
               <td className="border border-gray-200 px-2 py-1 text-gray-400">Armitage, Brad</td>
               <td className="border border-gray-200 px-2 py-1 text-gray-400">Oracle EBS DBA</td>
-              <td className="border border-gray-200 px-2 py-1 text-gray-400">Primary DBA Contact; Archive POC</td>
+              <td className="border border-gray-200 px-2 py-1 text-gray-400">Attended Oracle OpenWorld</td>
               <td className="border border-gray-200 px-2 py-1 text-gray-400">brad@example.com</td>
               <td className="border border-gray-200 px-2 py-1 text-gray-400">9528735184</td>
             </tr>
           </tbody>
         </table>
         <p className="mt-1 text-[11px] text-gray-400">
-          Company → tags · "Last, First" name auto-split · POC Roles semicolon-separated · Phone: #ERROR! and invalid values skipped · Duplicate emails skipped
+          Company Name → stored as tag · "Last name, First name" auto-split · Role → job title in notes · Phone: #ERROR! values skipped
         </p>
       </div>
 

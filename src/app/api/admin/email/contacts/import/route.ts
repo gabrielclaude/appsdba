@@ -4,14 +4,20 @@ import { emailContacts } from '@/db/schema';
 import * as XLSX from 'xlsx';
 
 function normalizeHeader(h: string): string {
+  // Remove spaces, underscores, dashes — comma intentionally kept for "Last name , first name" detection
   const s = h.trim().toLowerCase().replace(/[\s_\-]+/g, '');
   if (['email', 'emailaddress', 'e-mail'].includes(s)) return 'email';
   if (['firstname', 'first', 'fname', 'givenname'].includes(s)) return 'firstName';
   if (['lastname', 'last', 'lname', 'surname', 'familyname'].includes(s)) return 'lastName';
-  // CRM-style columns: Company | Name (Last, First) | Title | POC Roles | Email | Phone
-  if (['name', 'company', 'organization', 'org', 'account', 'accountname', 'client', 'clientname'].includes(s)) return 'company';
-  if (['role', 'contactname', 'contact', 'fullname', 'person', 'personname', 'contactperson'].includes(s)) return 'contactName';
-  if (['poc', 'jobtitle', 'title', 'position', 'jobfunction', 'function', 'jobdescription', 'jobrole'].includes(s)) return 'jobTitle';
+  // "Last name , first name" or "lastname,firstname" — contains both substrings after normalizing
+  if (s.includes('lastname') && s.includes('firstname')) return 'contactName';
+  // Company column: "Company Name", "Company", "Account", "Name", etc.
+  if (['company', 'companyname', 'organization', 'org', 'account', 'accountname', 'client', 'clientname', 'name'].includes(s)) return 'company';
+  // Contact person name (when company is separate)
+  if (['contactname', 'contact', 'fullname', 'person', 'personname', 'contactperson'].includes(s)) return 'contactName';
+  // Job title / role
+  if (['role', 'jobtitle', 'title', 'position', 'jobfunction', 'function', 'jobdescription', 'jobrole', 'poc'].includes(s)) return 'jobTitle';
+  // POC relationship tags
   if (['tags', 'tag', 'labels', 'groups', 'pocroles', 'pocs', 'roles', 'pocrole', 'pointofcontact'].includes(s)) return 'pocRoles';
   if (['notes', 'note', 'comments', 'comment'].includes(s)) return 'notes';
   if (['status', 'subscriptionstatus', 'substatus'].includes(s)) return 'status';
