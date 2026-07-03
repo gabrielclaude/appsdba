@@ -45,10 +45,6 @@ export function ImportForm() {
       setResult(data);
       if (inputRef.current) inputRef.current.value = '';
       setFileName(null);
-      // Only auto-reload on a clean import with no row errors
-      if (data.errors.length === 0) {
-        window.location.reload();
-      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed');
     } finally {
