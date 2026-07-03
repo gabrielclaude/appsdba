@@ -145,7 +145,7 @@ export async function POST(req: Request) {
     if (row.notes) noteParts.push(row.notes.trim());
     const notes = noteParts.length > 0 ? noteParts.join(' | ') : null;
 
-    const status = VALID_STATUSES.includes(row.status) ? row.status : 'subscribed';
+    const status = VALID_STATUSES.includes(row.status) ? row.status : 'unsubscribed';
     const referralCode = crypto.randomUUID().slice(0, 8).toUpperCase();
 
     try {
