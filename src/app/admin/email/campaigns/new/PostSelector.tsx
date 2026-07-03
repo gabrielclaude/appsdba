@@ -37,13 +37,13 @@ export default function PostSelector({ posts }: PostSelectorProps) {
 
 <p>In this article, we cover key insights and practical guidance for Oracle and EBS professionals.</p>
 
-<p><a href="https://appsdba.info/posts/${post.slug}">Read the full article →</a></p>
+<p><a href="${process.env.NEXT_PUBLIC_URL ?? 'https://appsdba.vercel.app'}/posts/${post.slug}">Read the full article →</a></p>
 
 <hr />
 
 <p style="font-size: 12px; color: #999;">
   You're receiving this because you subscribed to AppsDBA.info updates.<br />
-  <a href="https://appsdba.info/unsubscribe">Unsubscribe</a>
+  <a href="${process.env.NEXT_PUBLIC_URL ?? 'https://appsdba.vercel.app'}/unsubscribe">Unsubscribe</a>
 </p>`;
     }
   }

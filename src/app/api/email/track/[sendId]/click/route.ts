@@ -30,6 +30,6 @@ export async function GET(
 
   const destination = targetUrl.startsWith('http')
     ? targetUrl
-    : `https://appsdba.info${targetUrl}`;
+    : `${process.env.NEXT_PUBLIC_URL ?? 'https://appsdba.vercel.app'}${targetUrl}`;
   return Response.redirect(destination);
 }

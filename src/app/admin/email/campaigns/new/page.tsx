@@ -29,7 +29,7 @@ async function createCampaign(formData: FormData) {
       .limit(1);
 
     if (post) {
-      const header = `<h2>${post.title}</h2>\n${post.excerpt ? `<p>${post.excerpt}</p>\n` : ''}<p><a href="https://appsdba.info/posts/${post.slug}">Read the full article →</a></p>\n\n`;
+      const header = `<h2>${post.title}</h2>\n${post.excerpt ? `<p>${post.excerpt}</p>\n` : ''}<p><a href="${process.env.NEXT_PUBLIC_URL ?? 'https://appsdba.vercel.app'}/posts/${post.slug}">Read the full article →</a></p>\n\n`;
       if (!bodyHtml.includes(post.title)) {
         bodyHtml = header + bodyHtml;
       }
