@@ -36,6 +36,7 @@ export const categoryEnum = pgEnum('category', [
   'fusion-cloud-scm',
   'obiee',
   'oracle-atg',
+  'odoo',
 ]);
 
 export const posts = pgTable('posts', {

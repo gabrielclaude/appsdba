@@ -169,6 +169,11 @@ export const CATEGORIES = {
     color: 'bg-amber-100 text-amber-800',
     description: 'Oracle Business Intelligence Enterprise Edition — RPD repository design, session variables, init blocks, security configuration, WebLogic integration, and production troubleshooting.',
   },
+  'odoo': {
+    label: 'Odoo ERP',
+    color: 'bg-purple-100 text-purple-800',
+    description: 'Odoo ERP Community and Enterprise — installation, PostgreSQL backend, module management, multi-company configuration, upgrades, and production administration on Linux.',
+  },
 } as const;
 
 export type CategoryKey = keyof typeof CATEGORIES;
@@ -193,6 +198,12 @@ export const CATEGORY_SECTIONS: Record<string, {
     color: 'bg-sky-100 text-sky-800',
     description: 'Oracle Fusion Cloud SCM Inventory R13 — cloud-native inventory management on OCI.',
     categories: ['fusion-cloud-scm'],
+  },
+  'odoo-erp': {
+    label: 'Odoo ERP',
+    color: 'bg-purple-100 text-purple-800',
+    description: 'Odoo ERP installation, configuration, module management, and production administration — Community and Enterprise editions on Linux with PostgreSQL.',
+    categories: ['odoo'],
   },
 };
 

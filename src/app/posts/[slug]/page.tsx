@@ -9,6 +9,7 @@ import { YouTubeEmbed } from '@/components/YouTubeEmbed';
 import { VideoPlayer } from '@/components/VideoPlayer';
 import { PostContent } from '@/components/PostContent';
 import { PaywallCTA } from '@/components/PaywallCTA';
+import { VideoSimulator } from '@/components/essbase-simulator/VideoSimulator';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import type { CategoryKey } from '@/lib/categories';
@@ -105,6 +106,12 @@ export default async function PostPage({ params }: Props) {
 
       {post.videoUrl && (
         <VideoPlayer url={post.videoUrl} title={post.title} />
+      )}
+
+      {slug === 'essbase-tractor-manufacturing-application-outline-oci' && (
+        <div className="mb-8">
+          <VideoSimulator />
+        </div>
       )}
 
       <div className={`bg-[#FFF3B0] rounded-xl border border-[#C8A84B] p-8 sm:p-12 paper-texture ${isLocked ? 'relative overflow-hidden' : ''}`}>
