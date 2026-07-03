@@ -62,7 +62,13 @@ export async function POST(req: Request) {
     return Response.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const formData = await req.formData();
+  let formData: FormData;
+  try {
+    formData = await req.formData();
+  } catch {
+    return Response.json({ error: 'Failed to read upload — file may be too large' }, { status: 400 });
+  }
+
   const file = formData.get('file') as File | null;
   if (!file) return Response.json({ error: 'No file provided' }, { status: 400 });
 
@@ -71,10 +77,18 @@ export async function POST(req: Request) {
     return Response.json({ error: 'File must be .csv, .xlsx, or .xls' }, { status: 400 });
   }
 
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const workbook = XLSX.read(buffer, { type: 'buffer' });
-  const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  const rows: Record<string, string>[] = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+  let rows: Record<string, string>[];
+  try {
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const workbook = XLSX.read(buffer, { type: 'buffer' });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+  } catch (err) {
+    return Response.json(
+      { error: `Could not parse file: ${err instanceof Error ? err.message : 'invalid or unsupported format'}` },
+      { status: 400 }
+    );
+  }
 
   if (rows.length === 0) {
     return Response.json({ error: 'Spreadsheet is empty or has no data rows' }, { status: 400 });
