@@ -141,8 +141,15 @@ export function ImportForm() {
 
       {/* Error */}
       {error && (
-        <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-          {error}
+        <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+          <p className="mb-3">{error}</p>
+          <button
+            type="button"
+            onClick={() => setError(null)}
+            className="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded transition-colors"
+          >
+            OK
+          </button>
         </div>
       )}
 
