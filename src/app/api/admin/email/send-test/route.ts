@@ -1,4 +1,4 @@
-import { auth } from '@clerk/nextjs/server';
+import { auth, currentUser } from '@clerk/nextjs/server';
 import { db } from '@/db';
 import { emailCampaigns } from '@/db/schema';
 import { eq } from 'drizzle-orm';
@@ -7,10 +7,10 @@ import { sendEmail } from '@/lib/email-send';
 const TEST_RECIPIENT = 'gabriel.claude@gmail.com';
 
 export async function POST(req: Request) {
-  const { userId, sessionClaims } = await auth();
+  const { userId } = await auth();
   if (!userId) return Response.json({ error: 'Unauthorized' }, { status: 401 });
-  const role = (sessionClaims?.metadata as { role?: string })?.role;
-  if (role !== 'admin') return Response.json({ error: 'Forbidden' }, { status: 403 });
+  const user = await currentUser();
+  if (user?.publicMetadata?.role !== 'admin') return Response.json({ error: 'Forbidden' }, { status: 403 });
 
   const { campaignId } = await req.json();
   if (!campaignId) return Response.json({ error: 'Missing campaignId' }, { status: 400 });
