@@ -64,7 +64,7 @@ async function sendCampaign(campaignId: number, formData: FormData) {
     const { sendEmail } = await import('@/lib/email-send');
     for (const contact of selectedContacts) {
       try {
-        await sendEmail({ to: contact.email, subject: campaign.subject, html: campaign.bodyHtml });
+        await sendEmail({ to: contact.email, subject: campaign.subject, html: campaign.bodyHtml, previewText: campaign.previewText });
       } catch (err) {
         console.error(`Email delivery failed for ${contact.email}:`, err);
       }

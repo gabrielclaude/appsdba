@@ -28,6 +28,7 @@ export async function POST(req: Request) {
       to: TEST_RECIPIENT,
       subject: `[TEST] ${campaign.subject}`,
       html: campaign.bodyHtml,
+      previewText: campaign.previewText,
     });
     return Response.json({ success: true });
   } catch (err) {
