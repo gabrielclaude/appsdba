@@ -32,7 +32,7 @@ async function addContact(formData: FormData) {
     tags: tags || null,
     notes: notes || null,
     referralCode,
-    status: 'subscribed',
+    status: 'unsubscribed',
   });
 
   revalidatePath('/admin/email/contacts');
