@@ -60,15 +60,11 @@ export function ImportForm() {
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-gray-900">Import from Spreadsheet</h2>
         <a
-          href={`data:text/csv;charset=utf-8,${encodeURIComponent(
-            'Company Name,Last name , first name,Role,Notes,email,phone\n' +
-            '"Cambria USA","Armitage, Brad","Oracle EBS Database Administrator","Attended Oracle OpenWorld 2024",brad.armitage@cambriausa.com,9528735184\n' +
-            '"Alorica","Daza, Jayarr","Senior Database Administrator","Primary DBA Contact",jayarr.daza@alorica.com,+639178948698'
-          )}`}
-          download="contacts_template.csv"
+          href="/api/admin/email/contacts/template"
+          download="contacts_template.xlsx"
           className="text-xs text-orange-600 hover:text-orange-700"
         >
-          Download template CSV
+          Download template (.xlsx)
         </a>
       </div>
 
