@@ -43,11 +43,12 @@ export function ImportForm() {
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? 'Import failed'); return; }
       setResult(data);
-      // Reset file input
       if (inputRef.current) inputRef.current.value = '';
       setFileName(null);
-      // Refresh the page to show new contacts
-      window.location.reload();
+      // Only auto-reload on a clean import with no row errors
+      if (data.errors.length === 0) {
+        window.location.reload();
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed');
     } finally {
@@ -155,8 +156,10 @@ export function ImportForm() {
 
       {/* Results */}
       {result && (
-        <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg space-y-2">
-          <p className="text-sm font-semibold text-green-800">Import complete</p>
+        <div className={`mt-4 p-4 rounded-lg border space-y-2 ${result.errors.length > 0 ? 'bg-yellow-50 border-yellow-200' : 'bg-green-50 border-green-200'}`}>
+          <p className={`text-sm font-semibold ${result.errors.length > 0 ? 'text-yellow-800' : 'text-green-800'}`}>
+            Import complete
+          </p>
           <div className="flex gap-4 text-sm">
             <span className="text-green-700"><span className="font-bold">{result.imported}</span> imported</span>
             <span className="text-gray-500"><span className="font-bold">{result.skipped}</span> skipped (duplicates)</span>
@@ -166,10 +169,19 @@ export function ImportForm() {
           </div>
           {result.errors.length > 0 && (
             <ul className="text-xs text-red-600 space-y-0.5 mt-2">
-              {result.errors.slice(0, 10).map((e, i) => <li key={i}>{e}</li>)}
-              {result.errors.length > 10 && <li>…and {result.errors.length - 10} more</li>}
+              {result.errors.slice(0, 20).map((e, i) => <li key={i}>{e}</li>)}
+              {result.errors.length > 20 && <li>…and {result.errors.length - 20} more</li>}
             </ul>
           )}
+          <div className="flex gap-2 pt-1">
+            <button
+              type="button"
+              onClick={() => { setResult(null); window.location.reload(); }}
+              className="px-4 py-1.5 bg-gray-600 hover:bg-gray-700 text-white text-xs font-medium rounded transition-colors"
+            >
+              OK — refresh contacts
+            </button>
+          </div>
         </div>
       )}
     </div>
