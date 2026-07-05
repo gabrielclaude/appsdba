@@ -174,6 +174,11 @@ export const CATEGORIES = {
     color: 'bg-purple-100 text-purple-800',
     description: 'Odoo ERP Community and Enterprise — installation, PostgreSQL backend, module management, multi-company configuration, upgrades, and production administration on Linux.',
   },
+  'otm': {
+    label: 'Oracle Transportation Management',
+    color: 'bg-amber-100 text-amber-800',
+    description: 'Oracle Transportation Management (OTM) 6.x — installation, WebLogic domain setup, RCU schema provisioning, integration gateway, performance tuning, and production DBA administration.',
+  },
 } as const;
 
 export type CategoryKey = keyof typeof CATEGORIES;
@@ -204,6 +209,12 @@ export const CATEGORY_SECTIONS: Record<string, {
     color: 'bg-purple-100 text-purple-800',
     description: 'Odoo ERP installation, configuration, module management, and production administration — Community and Enterprise editions on Linux with PostgreSQL.',
     categories: ['odoo'],
+  },
+  'oracle-transportation-management': {
+    label: 'Oracle Transportation Management',
+    color: 'bg-amber-100 text-amber-800',
+    description: 'Oracle Transportation Management (OTM) 6.x — WebLogic-based logistics and freight planning platform installation, administration, and performance operations.',
+    categories: ['otm'],
   },
 };
 

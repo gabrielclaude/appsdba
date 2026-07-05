@@ -37,6 +37,7 @@ export const categoryEnum = pgEnum('category', [
   'obiee',
   'oracle-atg',
   'odoo',
+  'otm',
 ]);
 
 export const posts = pgTable('posts', {
