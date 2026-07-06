@@ -179,6 +179,11 @@ export const CATEGORIES = {
     color: 'bg-amber-100 text-amber-800',
     description: 'Oracle Transportation Management (OTM) 6.x — installation, WebLogic domain setup, RCU schema provisioning, integration gateway, performance tuning, and production DBA administration.',
   },
+  'docker-oracle': {
+    label: 'Docker for Oracle',
+    color: 'bg-sky-100 text-sky-800',
+    description: 'Oracle Database in Docker — containerized 19c/21c deployment on RHEL, persistent volumes, cgroup resource limits, performance monitoring, and production container operations.',
+  },
 } as const;
 
 export type CategoryKey = keyof typeof CATEGORIES;
@@ -215,6 +220,12 @@ export const CATEGORY_SECTIONS: Record<string, {
     color: 'bg-amber-100 text-amber-800',
     description: 'Oracle Transportation Management (OTM) 6.x — WebLogic-based logistics and freight planning platform installation, administration, and performance operations.',
     categories: ['otm'],
+  },
+  'docker-for-oracle': {
+    label: 'Docker for Oracle',
+    color: 'bg-sky-100 text-sky-800',
+    description: 'Oracle Database in Docker on RHEL — containerized 19c deployment, persistent storage, cgroup tuning, and production performance monitoring.',
+    categories: ['docker-oracle'],
   },
 };
 
