@@ -1,4 +1,4 @@
-import { pgTable, serial, text, varchar, timestamp, boolean, pgEnum, integer } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, varchar, timestamp, boolean, pgEnum, integer, json } from 'drizzle-orm/pg-core';
 
 export const categoryEnum = pgEnum('category', [
   'oracle-database',
@@ -165,3 +165,46 @@ export const emailEvents = pgTable('email_events', {
 });
 
 export type EmailEvent = typeof emailEvents.$inferSelect;
+
+// ── CRM: Prospect Pipeline ────────────────────────────────────────────────
+
+export const crmProspects = pgTable('crm_prospects', {
+  id: serial('id').primaryKey(),
+  firstName: varchar('first_name', { length: 100 }),
+  lastName: varchar('last_name', { length: 100 }),
+  email: varchar('email', { length: 255 }).notNull().unique(),
+  company: varchar('company', { length: 200 }),
+  jobTitle: varchar('job_title', { length: 200 }),
+  phone: varchar('phone', { length: 50 }),
+  // lead | qualified | interested | trial | converted | lost
+  source: varchar('source', { length: 50 }).notNull().default('organic'),
+  stage: varchar('stage', { length: 50 }).notNull().default('lead'),
+  score: integer('score').notNull().default(0),
+  notes: text('notes'),
+  tags: json('tags').$type<string[]>().default([]),
+  nextFollowUpAt: timestamp('next_follow_up_at'),
+  lastContactedAt: timestamp('last_contacted_at'),
+  convertedAt: timestamp('converted_at'),
+  linkedContactId: integer('linked_contact_id'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export type CrmProspect = typeof crmProspects.$inferSelect;
+export type NewCrmProspect = typeof crmProspects.$inferInsert;
+
+export const crmActivities = pgTable('crm_activities', {
+  id: serial('id').primaryKey(),
+  prospectId: integer('prospect_id').notNull(),
+  // note | email | call | meeting | demo | follow-up
+  type: varchar('type', { length: 50 }).notNull().default('note'),
+  subject: varchar('subject', { length: 500 }),
+  body: text('body'),
+  // positive | neutral | negative | no-response
+  outcome: varchar('outcome', { length: 50 }),
+  createdBy: varchar('created_by', { length: 255 }),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+export type CrmActivity = typeof crmActivities.$inferSelect;
+export type NewCrmActivity = typeof crmActivities.$inferInsert;

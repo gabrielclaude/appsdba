@@ -5,6 +5,7 @@ import { auth, currentUser } from '@clerk/nextjs/server';
 const navItems = [
   { href: '/admin', label: 'Overview' },
   { href: '/admin/marketing', label: 'Marketing' },
+  { href: '/admin/marketing/crm', label: 'Prospects' },
   { href: '/admin/email', label: 'Email' },
   { href: '/admin/email/analytics', label: 'Email Analytics' },
   { href: '/admin/accounting', label: 'Accounting' },
