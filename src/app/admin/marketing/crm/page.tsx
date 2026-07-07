@@ -1,5 +1,3 @@
-'use server';
-
 import { redirect } from 'next/navigation';
 import { auth } from '@clerk/nextjs/server';
 import { revalidatePath } from 'next/cache';
