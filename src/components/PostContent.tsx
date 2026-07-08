@@ -1,3 +1,5 @@
+import { CodeBlock } from './CodeBlock';
+
 interface PostContentProps {
   content: string;
 }
@@ -22,16 +24,7 @@ export function PostContent({ content }: PostContentProps) {
         i++;
       }
       elements.push(
-        <div key={key()} className="my-4">
-          {lang && (
-            <div className="bg-gray-700 text-gray-300 text-xs px-3 py-1 rounded-t-md font-mono">
-              {lang}
-            </div>
-          )}
-          <pre className={`bg-gray-900 text-green-300 text-sm p-4 overflow-x-auto font-mono ${lang ? 'rounded-b-md' : 'rounded-md'}`}>
-            <code>{codeLines.join('\n')}</code>
-          </pre>
-        </div>
+        <CodeBlock key={key()} lang={lang} code={codeLines.join('\n')} />
       );
     } else if (line.startsWith('## ')) {
       elements.push(
