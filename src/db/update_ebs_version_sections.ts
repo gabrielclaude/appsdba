@@ -885,8 +885,6 @@ const SLUG_MAP: Record<string, string> = {
   'ebs-to-fusion-erp-migration-strategy': FUSION_MIGRATION,
   'ebs-to-fusion-erp-migration-runbook': FUSION_MIGRATION,
 
-  // general DB ops posts
-  'oracle-ebs-12211-rhel9-dr-architecture': HA_DR,
 };
 
 // ── Main ───────────────────────────────────────────────────────────────────
