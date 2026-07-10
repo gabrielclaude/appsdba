@@ -12,13 +12,48 @@ export const STAGES = [
 ] as const;
 
 export const SOURCES = [
-  { key: 'organic',       label: 'Organic Search' },
-  { key: 'referral',      label: 'Referral'        },
-  { key: 'social',        label: 'Social Media'    },
-  { key: 'conference',    label: 'Conference'      },
-  { key: 'cold-outreach', label: 'Cold Outreach'   },
-  { key: 'other',         label: 'Other'           },
+  { key: 'organic',           label: 'Organic Search'         },
+  { key: 'referral',          label: 'Referral'               },
+  { key: 'social',            label: 'Social Media'           },
+  { key: 'conference',        label: 'Conference'             },
+  { key: 'cold-outreach',     label: 'Cold Outreach'          },
+  { key: 'oracle-community',  label: 'Oracle Community Forum' },
+  { key: 'oaug-quest',        label: 'OAUG / Quest Community' },
+  { key: 'zoominfo',          label: 'ZoomInfo'               },
+  { key: 'apollo',            label: 'Apollo.io'              },
+  { key: 'linkedin-abm',      label: 'LinkedIn ABM'           },
+  { key: 'stack-overflow',    label: 'Stack Overflow'         },
+  { key: 'other',             label: 'Other'                  },
 ] as const;
+
+export const ABM_SEGMENTS = [
+  { key: 'apps-dba',      label: 'Apps DBA',        color: 'bg-indigo-100 text-indigo-700'  },
+  { key: 'ebs-engineer',  label: 'EBS Engineer',    color: 'bg-blue-100 text-blue-700'      },
+  { key: 'ebs-manager',   label: 'EBS Manager',     color: 'bg-violet-100 text-violet-700'  },
+  { key: 'functional',    label: 'Functional Lead',  color: 'bg-teal-100 text-teal-700'      },
+  { key: 'it-director',   label: 'IT Director',     color: 'bg-amber-100 text-amber-700'    },
+  { key: 'ebs-onprem',    label: 'On-Prem',         color: 'bg-gray-100 text-gray-700'      },
+  { key: 'ebs-cloud',     label: 'Cloud (OCI/AWS)', color: 'bg-cyan-100 text-cyan-700'      },
+] as const;
+
+export const ABM_VERTICALS = [
+  { key: 'manufacturing', label: 'Manufacturing'    },
+  { key: 'healthcare',    label: 'Healthcare'       },
+  { key: 'retail',        label: 'Retail/Wholesale' },
+  { key: 'energy',        label: 'Energy/Utilities' },
+  { key: 'government',    label: 'Government'       },
+  { key: 'financial',     label: 'Financial Svcs'   },
+  { key: 'education',     label: 'Higher Ed'        },
+  { key: 'other',         label: 'Other'            },
+] as const;
+
+export function getSegment(key: string) {
+  return ABM_SEGMENTS.find((s) => s.key === key) ?? null;
+}
+
+export function getVertical(key: string) {
+  return ABM_VERTICALS.find((v) => v.key === key) ?? null;
+}
 
 export const ACTIVITY_TYPES = [
   { key: 'note',      label: 'Note'       },
@@ -48,11 +83,15 @@ export function getActivityType(key: string) {
   return ACTIVITY_TYPES.find((t) => t.key === key) ?? ACTIVITY_TYPES[0];
 }
 
-export async function getAllProspects(stage?: string) {
+export async function getAllProspects(stage?: string, segment?: string) {
+  const conditions = [];
+  if (stage) conditions.push(eq(crmProspects.stage, stage));
+  if (segment) conditions.push(sql`${crmProspects.tags}::jsonb @> ${JSON.stringify([segment])}::jsonb`);
+
   const rows = await db
     .select()
     .from(crmProspects)
-    .where(stage ? eq(crmProspects.stage, stage) : undefined)
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(
       sql`CASE stage
         WHEN 'lead'       THEN 1
@@ -65,6 +104,51 @@ export async function getAllProspects(stage?: string) {
       desc(crmProspects.createdAt),
     );
   return rows;
+}
+
+export async function getAccountsView(vertical?: string) {
+  const all = await db
+    .select()
+    .from(crmProspects)
+    .orderBy(crmProspects.company, desc(crmProspects.createdAt));
+
+  type AccountEntry = {
+    company: string;
+    vertical: string | null;
+    prospects: (typeof all)[number][];
+  };
+
+  const map = new Map<string, AccountEntry>();
+  for (const p of all) {
+    const key = p.company?.trim() || '(No Company)';
+    if (!map.has(key)) map.set(key, { company: key, vertical: null, prospects: [] });
+    const entry = map.get(key)!;
+    // Derive vertical from tags
+    if (!entry.vertical && Array.isArray(p.tags)) {
+      const vt = ABM_VERTICALS.find((v) => (p.tags as string[]).includes(v.key));
+      if (vt) entry.vertical = vt.key;
+    }
+    entry.prospects.push(p);
+  }
+
+  const accounts = [...map.values()]
+    .filter((a) => !vertical || a.vertical === vertical || (a.prospects.some((p) => Array.isArray(p.tags) && (p.tags as string[]).includes(vertical!))))
+    .map((a) => ({
+      ...a,
+      count: a.prospects.length,
+      topScore: Math.max(0, ...a.prospects.map((p) => p.score)),
+      segments: [...new Set(
+        a.prospects.flatMap((p) => Array.isArray(p.tags) ? (p.tags as string[]).filter((t) => ABM_SEGMENTS.some((s) => s.key === t)) : [])
+      )],
+      stages: [...new Set(a.prospects.map((p) => p.stage))],
+      lastActivity: a.prospects.reduce<Date | null>((best, p) => {
+        const d = p.lastContactedAt ?? p.updatedAt;
+        return !best || d > best ? d : best;
+      }, null),
+    }))
+    .sort((a, b) => b.topScore - a.topScore || b.count - a.count);
+
+  return accounts;
 }
 
 export async function getPipelineCounts() {

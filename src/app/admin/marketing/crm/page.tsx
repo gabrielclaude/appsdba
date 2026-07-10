@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import Link from 'next/link';
 import { db } from '@/db';
 import { crmProspects } from '@/db/schema';
-import { getAllProspects, getPipelineCounts, getFollowUpsDue, STAGES, SOURCES, getStage } from '@/lib/crm';
+import { getAllProspects, getPipelineCounts, getFollowUpsDue, STAGES, SOURCES, ABM_SEGMENTS, getStage } from '@/lib/crm';
 
 export const dynamic = 'force-dynamic';
 
@@ -51,12 +51,12 @@ function ScoreBar({ score }: { score: number }) {
 export default async function CrmPage({
   searchParams,
 }: {
-  searchParams: Promise<{ stage?: string }>;
+  searchParams: Promise<{ stage?: string; segment?: string }>;
 }) {
-  const { stage: stageFilter } = await searchParams;
+  const { stage: stageFilter, segment: segmentFilter } = await searchParams;
 
   const [prospects, counts, followUpsDue] = await Promise.all([
-    getAllProspects(stageFilter),
+    getAllProspects(stageFilter, segmentFilter),
     getPipelineCounts(),
     getFollowUpsDue(),
   ]);
@@ -72,6 +72,43 @@ export default async function CrmPage({
           <h1 className="text-2xl font-bold text-gray-900">Prospect Pipeline</h1>
           <p className="text-sm text-gray-500 mt-0.5">{totalActive} active prospects in pipeline</p>
         </div>
+        <Link
+          href="/admin/marketing/crm/abm"
+          className="text-sm font-medium bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-4 py-2 rounded-lg transition-colors"
+        >
+          Target Accounts (ABM) →
+        </Link>
+      </div>
+
+      {/* ABM persona segment filter */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-xs text-gray-400">Persona:</span>
+        <Link
+          href={stageFilter ? `/admin/marketing/crm?stage=${stageFilter}` : '/admin/marketing/crm'}
+          className={`text-xs px-3 py-1 rounded-full border transition-colors ${
+            !segmentFilter ? 'bg-gray-700 text-white border-gray-700' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
+          }`}
+        >
+          All
+        </Link>
+        {ABM_SEGMENTS.map((s) => {
+          const params = new URLSearchParams();
+          params.set('segment', s.key);
+          if (stageFilter) params.set('stage', stageFilter);
+          return (
+            <Link
+              key={s.key}
+              href={`/admin/marketing/crm?${params.toString()}`}
+              className={`text-xs px-3 py-1 rounded-full border transition-colors ${
+                segmentFilter === s.key
+                  ? `${s.color} border-current`
+                  : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
+              }`}
+            >
+              {s.label}
+            </Link>
+          );
+        })}
       </div>
 
       {/* Pipeline stage cards */}
@@ -79,10 +116,14 @@ export default async function CrmPage({
         {STAGES.map((s) => {
           const n = counts[s.key] ?? 0;
           const isActive = stageFilter === s.key;
+          const stageParams = new URLSearchParams();
+          if (!isActive) stageParams.set('stage', s.key);
+          if (segmentFilter) stageParams.set('segment', segmentFilter);
+          const stageHref = `/admin/marketing/crm${stageParams.toString() ? `?${stageParams.toString()}` : ''}`;
           return (
             <Link
               key={s.key}
-              href={isActive ? '/admin/marketing/crm' : `/admin/marketing/crm?stage=${s.key}`}
+              href={stageHref}
               className={`bg-white border rounded-xl p-4 text-center transition-all hover:shadow-sm ${
                 isActive ? 'border-orange-400 ring-1 ring-orange-300' : 'border-gray-200'
               }`}
@@ -183,12 +224,15 @@ export default async function CrmPage({
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
           <p className="text-sm font-semibold text-gray-700">
-            {stageFilter ? `${getStage(stageFilter).label} prospects` : 'All prospects'}
+            {stageFilter ? `${getStage(stageFilter).label} ` : ''}{segmentFilter ? `[${ABM_SEGMENTS.find(s => s.key === segmentFilter)?.label ?? segmentFilter}] ` : ''}{!stageFilter && !segmentFilter ? 'All prospects' : 'prospects'}
             <span className="ml-2 text-gray-400 font-normal">({prospects.length})</span>
           </p>
-          {stageFilter && (
-            <Link href="/admin/marketing/crm" className="text-xs text-orange-600 hover:underline">
-              Clear filter
+          {(stageFilter || segmentFilter) && (
+            <Link
+              href={segmentFilter && !stageFilter ? `/admin/marketing/crm?segment=${segmentFilter}` : stageFilter && !segmentFilter ? `/admin/marketing/crm?stage=${stageFilter}` : '/admin/marketing/crm'}
+              className="text-xs text-orange-600 hover:underline"
+            >
+              {stageFilter && segmentFilter ? 'Clear stage filter' : 'Clear filter'}
             </Link>
           )}
         </div>
