@@ -6,6 +6,8 @@ const navItems = [
   { href: '/admin', label: 'Overview' },
   { href: '/admin/marketing', label: 'Marketing' },
   { href: '/admin/marketing/crm', label: 'Prospects' },
+  { href: '/admin/marketing/crm/abm', label: 'Target Accounts' },
+  { href: '/admin/marketing/abm-guide', label: 'ABM Guide' },
   { href: '/admin/email', label: 'Email' },
   { href: '/admin/email/analytics', label: 'Email Analytics' },
   { href: '/admin/accounting', label: 'Accounting' },
