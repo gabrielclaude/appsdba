@@ -184,6 +184,11 @@ export const CATEGORIES = {
     color: 'bg-sky-100 text-sky-800',
     description: 'Oracle Database in Docker — containerized 19c/21c deployment on RHEL, persistent volumes, cgroup resource limits, performance monitoring, and production container operations.',
   },
+  'mulesoft': {
+    label: 'MuleSoft',
+    color: 'bg-indigo-100 text-indigo-800',
+    description: 'MuleSoft Anypoint Platform — API-led connectivity, Salesforce integration, Oracle Database connectors, DataWeave transformations, and data mining pipelines between Salesforce and Oracle.',
+  },
 } as const;
 
 export type CategoryKey = keyof typeof CATEGORIES;
@@ -226,6 +231,12 @@ export const CATEGORY_SECTIONS: Record<string, {
     color: 'bg-sky-100 text-sky-800',
     description: 'Oracle Database in Docker on RHEL — containerized 19c deployment, persistent storage, cgroup tuning, and production performance monitoring.',
     categories: ['docker-oracle'],
+  },
+  'mulesoft-integration': {
+    label: 'MuleSoft',
+    color: 'bg-indigo-100 text-indigo-800',
+    description: 'MuleSoft Anypoint Platform — API-led connectivity, Salesforce integration, Oracle Database connectors, DataWeave transformations, and data mining pipelines between Salesforce and Oracle.',
+    categories: ['mulesoft'],
   },
 };
 

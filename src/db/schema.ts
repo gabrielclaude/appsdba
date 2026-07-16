@@ -39,6 +39,7 @@ export const categoryEnum = pgEnum('category', [
   'odoo',
   'otm',
   'docker-oracle',
+  'mulesoft',
 ]);
 
 export const posts = pgTable('posts', {
