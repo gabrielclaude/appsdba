@@ -3,6 +3,7 @@ import { PostCard } from '@/components/PostCard';
 import { CATEGORIES, CATEGORY_SECTIONS, SECTIONED_CATEGORY_KEYS } from '@/lib/categories';
 import Link from 'next/link';
 import { HomeSearch } from '@/components/HomeSearch';
+import { CategoryStatsDashboard } from '@/components/CategoryStatsDashboard';
 
 export default async function HomePage() {
   const posts = await getAllPosts();
@@ -23,6 +24,8 @@ export default async function HomePage() {
           </Link>
         </div>
       </section>
+
+      <CategoryStatsDashboard posts={posts} />
 
       <section className="mb-10">
         <HomeSearch />
