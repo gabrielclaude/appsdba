@@ -16,7 +16,7 @@ export default async function HomePage() {
             <h1 className="text-3xl font-bold text-[#FFE4A0] mb-2">21st Century Apps DBA</h1>
             <p className="text-[#FFCB8E] max-w-2xl">
               Practical guides and deep-dives on Oracle Database, E-Business Suite, WebLogic, GoldenGate,
-              Data Guard disaster recovery, Oracle RAC &amp; Clusterware, Exadata, and Essbase — written by a working DBA.
+              Data Guard disaster recovery, Oracle RAC &amp; Clusterware, Exadata, and Essbase — written by a team of System Admins, Core DBA&apos;s, Apps DBAs, Solution Architects.
             </p>
           </div>
           <Link href="/dw" className="shrink-0 mt-1 text-sm font-medium text-[#5EEAD4] hover:text-teal-300 hover:underline transition">
