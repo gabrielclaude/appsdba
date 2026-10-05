@@ -13,7 +13,8 @@ export default async function HomePage() {
       <section className="mb-10">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-[#FFE4A0] mb-2">21st Century Apps DBA</h1>
+            <h1 className="text-3xl font-bold text-[#FFE4A0] mb-1">21st Century Apps DBA, Concepts &amp; Solutions</h1>
+            <p className="text-xs text-[#FFCB8E] text-right mb-2">Brought to you by Penguin Orchestra</p>
             <p className="text-[#FFCB8E] max-w-2xl">
               Practical guides and deep-dives on Oracle Database, E-Business Suite, WebLogic, GoldenGate,
               Data Guard disaster recovery, Oracle RAC &amp; Clusterware, Exadata, and Essbase — written by a team of System Admins, Core DBA&apos;s, Apps DBAs, Solution Architects.
