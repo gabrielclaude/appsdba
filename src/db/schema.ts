@@ -40,6 +40,7 @@ export const categoryEnum = pgEnum('category', [
   'otm',
   'docker-oracle',
   'mulesoft',
+  'oracle-cloud-infra',
 ]);
 
 export const posts = pgTable('posts', {

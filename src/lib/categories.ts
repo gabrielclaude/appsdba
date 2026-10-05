@@ -189,6 +189,11 @@ export const CATEGORIES = {
     color: 'bg-indigo-100 text-indigo-800',
     description: 'MuleSoft Anypoint Platform — API-led connectivity, Salesforce integration, Oracle Database connectors, DataWeave transformations, and data mining pipelines between Salesforce and Oracle.',
   },
+  'oracle-cloud-infra': {
+    label: 'Oracle Cloud Infrastructure',
+    color: 'bg-sky-100 text-sky-800',
+    description: 'Oracle Cloud Infrastructure (OCI) — provisioning Oracle Database and EBS on OCI, Availability Domains, Fault Domains, VCN networking, load balancing, and high availability architecture.',
+  },
 } as const;
 
 export type CategoryKey = keyof typeof CATEGORIES;
