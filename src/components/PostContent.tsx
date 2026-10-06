@@ -15,7 +15,13 @@ export function PostContent({ content }: PostContentProps) {
   while (i < lines.length) {
     const line = lines[i];
 
-    if (line.startsWith('```')) {
+    if (i === 0 && /^By [A-Z]/.test(line)) {
+      elements.push(
+        <p key={key()} className="text-gray-600 font-medium mt-1 mb-4" style={{ fontSize: '1.25rem' }}>
+          {line}
+        </p>
+      );
+    } else if (line.startsWith('```')) {
       const lang = line.slice(3).trim();
       const codeLines: string[] = [];
       i++;
