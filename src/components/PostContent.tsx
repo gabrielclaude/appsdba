@@ -76,14 +76,16 @@ export function PostContent({ content }: PostContentProps) {
 }
 
 function formatInline(text: string): string {
-  // Extract markdown links before entity-escaping so URLs are preserved intact
+  // Extract markdown links before entity-escaping so URLs are preserved intact.
+  // Use a string placeholder (not null bytes — browsers strip those).
   const linkSlots: string[] = [];
   const withPlaceholders = text.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, (_, linkText, url) => {
     const idx = linkSlots.length;
     linkSlots.push(
-      `<a href="${url}" target="_blank" rel="noopener noreferrer" class="text-blue-700 hover:underline">${linkText}</a>`
+      `<a href="${url}" target="_blank" rel="noopener noreferrer" ` +
+      `class="text-[#1a4480] underline font-medium hover:text-[#E8693C] transition-colors">${linkText}</a>`
     );
-    return `\x00LINK${idx}\x00`;
+    return `LINKSLOT_${idx}_END`;
   });
 
   let result = withPlaceholders
@@ -94,7 +96,7 @@ function formatInline(text: string): string {
     .replace(/`(.+?)`/g, '<code class="bg-[#f0e8d5] text-red-800 px-1.5 py-0.5 rounded text-base font-mono border border-[#d4c4a8]">$1</code>');
 
   linkSlots.forEach((link, idx) => {
-    result = result.replace(`\x00LINK${idx}\x00`, link);
+    result = result.replace(`LINKSLOT_${idx}_END`, link);
   });
 
   return result;
