@@ -76,10 +76,26 @@ export function PostContent({ content }: PostContentProps) {
 }
 
 function formatInline(text: string): string {
-  return text
+  // Extract markdown links before entity-escaping so URLs are preserved intact
+  const linkSlots: string[] = [];
+  const withPlaceholders = text.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, (_, linkText, url) => {
+    const idx = linkSlots.length;
+    linkSlots.push(
+      `<a href="${url}" target="_blank" rel="noopener noreferrer" class="text-blue-700 hover:underline">${linkText}</a>`
+    );
+    return `\x00LINK${idx}\x00`;
+  });
+
+  let result = withPlaceholders
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/`(.+?)`/g, '<code class="bg-[#f0e8d5] text-red-800 px-1.5 py-0.5 rounded text-base font-mono border border-[#d4c4a8]">$1</code>');
+
+  linkSlots.forEach((link, idx) => {
+    result = result.replace(`\x00LINK${idx}\x00`, link);
+  });
+
+  return result;
 }
