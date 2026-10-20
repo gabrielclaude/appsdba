@@ -8,7 +8,8 @@ import { CategoryStatsDashboard } from '@/components/CategoryStatsDashboard';
 export default async function HomePage() {
   const posts = await getAllPosts();
   const totalCategories = Object.keys(CATEGORIES).length;
-  const premiumCount = posts.filter(p => p.isPremium).length;
+  const runbookCount = posts.filter(p => p.isPremium && p.slug.includes('runbook')).length;
+  const scriptCount  = posts.filter(p => p.isPremium && !p.slug.includes('runbook')).length;
 
   return (
     <div>
@@ -54,11 +55,20 @@ export default async function HomePage() {
             </div>
           </div>
 
-          {/* Premium runbook count */}
-          <div className="text-center mt-3">
-            <span className="text-2xl font-bold text-amber-400">{premiumCount}</span>
-            <span className="text-2xl font-bold text-[#FFE4A0]"> Runbooks &amp; Scripts available with Pro Subscription</span>
+          {/* Premium counts */}
+          <div className="text-center mt-4 space-y-1">
+            <div>
+              <span className="text-2xl font-bold text-amber-400">{runbookCount}</span>
+              <span className="text-2xl font-bold text-[#FFE4A0]"> Runbooks available with Pro Subscription</span>
+            </div>
+            <div>
+              <span className="text-2xl font-bold text-amber-400">{scriptCount}</span>
+              <span className="text-2xl font-bold text-[#FFE4A0]"> Scripts available with Pro Subscription</span>
+            </div>
           </div>
+
+          {/* Spacer before search */}
+          <div className="h-6" />
 
           {/* Search bar */}
           <div className="max-w-xl mx-auto">
