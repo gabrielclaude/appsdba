@@ -8,6 +8,7 @@ import { CategoryStatsDashboard } from '@/components/CategoryStatsDashboard';
 export default async function HomePage() {
   const posts = await getAllPosts();
   const totalCategories = Object.keys(CATEGORIES).length;
+  const premiumCount = posts.filter(p => p.isPremium).length;
 
   return (
     <div>
@@ -50,6 +51,9 @@ export default async function HomePage() {
             <div className="text-center">
               <div className="text-2xl font-bold text-[#FFE4A0]">Free</div>
               <div className="text-[#C8A84B]/70 text-xs uppercase tracking-wider">to Browse</div>
+              <div className="text-amber-400 text-xs font-medium mt-1">
+                {premiumCount} runbooks with subscription
+              </div>
             </div>
           </div>
 
