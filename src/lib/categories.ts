@@ -233,6 +233,12 @@ export const CATEGORIES = {
     icon: '🌐',
     description: 'Oracle Cloud Infrastructure (OCI) — provisioning Oracle Database and EBS on OCI, Availability Domains, Fault Domains, VCN networking, load balancing, and high availability architecture.',
   },
+  'ebs-next-gen': {
+    label: 'Oracle EBS Next Gen',
+    color: 'bg-violet-100 text-violet-800',
+    icon: '🚀',
+    description: 'Oracle EBS Next Generation modernization — XDF-based Forms migration, OAF extensibility, REST API adoption, and cloud-native evolution of E-Business Suite 12.x deployments.',
+  },
 } as const;
 
 export type CategoryKey = keyof typeof CATEGORIES;
