@@ -51,10 +51,13 @@ export default async function HomePage() {
             <div className="text-center">
               <div className="text-2xl font-bold text-[#FFE4A0]">Free</div>
               <div className="text-[#C8A84B]/70 text-xs uppercase tracking-wider">to Browse</div>
-              <div className="text-amber-400 text-xs font-medium mt-1">
-                {premiumCount} runbooks with subscription
-              </div>
             </div>
+          </div>
+
+          {/* Premium runbook count */}
+          <div className="text-center mt-3">
+            <span className="text-2xl font-bold text-amber-400">{premiumCount}</span>
+            <span className="text-2xl font-bold text-[#FFE4A0]"> Runbooks &amp; Scripts available with Pro Subscription</span>
           </div>
 
           {/* Search bar */}
