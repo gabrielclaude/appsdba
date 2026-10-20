@@ -27,6 +27,10 @@ export default async function HomePage() {
   const runbooksByCat = groupByCategory(runbooks);
   const scriptsByCat  = groupByCategory(scripts);
   const rmanByCat     = groupByCategory(rman);
+  const wlstCount     = posts.filter(p =>
+    p.slug.includes('wlst') ||
+    (p.category === 'weblogic' && (p.slug.includes('script') || p.slug.includes('monitor')))
+  ).length;
 
   return (
     <div>
@@ -96,6 +100,10 @@ export default async function HomePage() {
 
       {/* ── Content Breakdown ─────────────────────────────────────────── */}
       <section className="mb-8 rounded-2xl border border-[#C8A84B]/30 bg-[#0D1F3C]/60 overflow-hidden">
+        <div className="px-5 py-3 border-b border-[#C8A84B]/20 flex items-center justify-between">
+          <span className="text-xs font-bold text-[#C8A84B] uppercase tracking-widest">Available with Pro Subscription</span>
+          <span className="text-sm font-bold text-amber-400">$75.00 Annually</span>
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-[#C8A84B]/20">
 
           {/* Runbooks */}
@@ -129,15 +137,25 @@ export default async function HomePage() {
             </div>
             <div className="space-y-1.5">
               {scriptsByCat.map(([cat, count]) => (
-                <Link key={cat} href={`/category/${cat}`}
-                  className="flex items-center justify-between gap-2 group">
-                  <span className="text-xs text-[#FFCB8E] group-hover:text-[#E8693C] transition-colors truncate">
-                    {getCategoryIcon(cat as CategoryKey)} {getCategoryLabel(cat as CategoryKey)}
-                  </span>
-                  <span className="shrink-0 text-xs font-semibold text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded">
-                    {count}
-                  </span>
-                </Link>
+                <div key={cat}>
+                  <Link href={`/category/${cat}`}
+                    className="flex items-center justify-between gap-2 group">
+                    <span className="text-xs text-[#FFCB8E] group-hover:text-[#E8693C] transition-colors truncate">
+                      {getCategoryIcon(cat as CategoryKey)} {getCategoryLabel(cat as CategoryKey)}
+                    </span>
+                    <span className="shrink-0 text-xs font-semibold text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded">
+                      {count}
+                    </span>
+                  </Link>
+                  {cat === 'weblogic' && (
+                    <div className="flex items-center justify-between gap-2 pl-4 mt-1">
+                      <span className="text-xs text-[#C8A84B]/70 truncate">↳ WLST Scripts</span>
+                      <span className="shrink-0 text-xs font-semibold text-[#C8A84B] bg-[#C8A84B]/10 px-1.5 py-0.5 rounded">
+                        {wlstCount}
+                      </span>
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
           </div>
