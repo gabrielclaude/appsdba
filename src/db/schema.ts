@@ -42,6 +42,7 @@ export const categoryEnum = pgEnum('category', [
   'mulesoft',
   'oracle-cloud-infra',
   'ebs-next-gen',
+  'vmware',
 ]);
 
 export const posts = pgTable('posts', {

@@ -239,6 +239,12 @@ export const CATEGORIES = {
     icon: '🚀',
     description: 'Oracle EBS Next Generation modernization — XDF-based Forms migration, OAF extensibility, REST API adoption, and cloud-native evolution of E-Business Suite 12.x deployments.',
   },
+  'vmware': {
+    label: 'VMware',
+    color: 'bg-blue-100 text-blue-800',
+    icon: '🖥️',
+    description: 'VMware Workstation Pro and vSphere — deploying Oracle Database, E-Business Suite, and middleware stacks on virtualized RHEL environments for development, training, and staging.',
+  },
 } as const;
 
 export type CategoryKey = keyof typeof CATEGORIES;
